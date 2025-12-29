@@ -24,22 +24,13 @@
         const CSV_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/supermarket_prices.csv";
         const AVATAR_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png";
         const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
-        const VERSION = "30.0";
-
-        const RECIPE_DB = {
-            "マグロ|まぐろ|鮪|刺身": [{ m: "マグロ丼" }, { m: "マグロの竜田揚げ" }],
-            "キャベツ": [{ m: "お好み焼き" }, { m: "回鍋肉" }],
-            "豚肉|豚バラ": [{ m: "生姜焼き" }, { m: "豚汁" }],
-            "鶏肉|もも肉": [{ m: "親子丼" }, { m: "唐揚げ" }],
-            "たまご|卵": [{ m: "ニラ玉炒め" }, { m: "オムレツ" }],
-            "きゅうり|キュウリ": [{ m: "たたききゅうり" }, { m: "きゅうりの浅漬け" }]
-        };
+        const VERSION = "31.0";
 
         const GREETINGS = [
-            "響だよ！今日もいいもの見つけてきたよ♪",
-            "こんにちは、響です！今日のお買い物のアドバイスするね！",
-            "お疲れ様！響が今日のイチオシを教えるね♪",
-            "やっほー！響と一緒に今日の献立考えよ！"
+            "響だよ！レシピを検索したよ♪",
+            "こんにちは、響です！美味しそうなレシピ、見つかるかな？",
+            "任せて！響がレシピページへ案内するね！",
+            "やっほー！この食材で美味しいもの作っちゃお！"
         ];
 
         const App = () => {
@@ -57,7 +48,7 @@
                         const parsed = rows.map(row => {
                             const [item, price, store, address, date] = row.split(',');
                             return { item: item?.trim(), price: parseInt(price), store: store?.trim(), address: address?.trim(), date: date?.trim() };
-                        }).map(d => ({...d, price: isNaN(d.price) ? 0 : d.price})).filter(d => d.item);
+                        }).filter(d => d.item);
                         setData(parsed);
                     } catch (e) { console.error(e); }
                 };
@@ -72,30 +63,24 @@
                 return Object.values(minMap).sort((a,b) => a.price - b.price);
             }, [data, activeArea]);
 
-            const talk = (text, menu) => setSpeech({ text, menu });
-
-            const findRecipe = (keyword) => {
-                const key = Object.keys(RECIPE_DB).find(k => new RegExp(k, 'i').test(keyword));
-                if (key) {
-                    const choices = RECIPE_DB[key];
-                    return choices[Math.floor(Math.random() * choices.length)];
-                }
-                return { m: keyword };
+            const openRecipe = (keyword) => {
+                const url = `https://www.google.com/search?q=${encodeURIComponent(keyword + ' レシピ')}`;
+                window.open(url, '_blank');
             };
 
             const handleAutoConsult = () => {
-                if (filteredData.length === 0) return talk("響だよ！今はまだお買い得データがないみたい...。", null);
+                if (filteredData.length === 0) return setSpeech({ text: "今はデータがないみたい...。" });
                 const best = filteredData[0];
-                const r = findRecipe(best.item);
                 const greet = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-                talk(`${greet} 今、${best.item}が¥${best.price}ですごくお得だよ！【${r.m}】なんてどうかな？`, r.m);
+                setSpeech({ text: `${greet}\n今一番お得な「${best.item}」のレシピを開くね！`, menu: best.item });
+                openRecipe(best.item);
             };
 
             const handleInputConsult = (e) => {
                 e.preventDefault();
                 if (!userInput) return;
-                const r = findRecipe(userInput);
-                talk(`任せて！「${userInput}」なら【${r.m}】がおすすめだよ！作り方も調べてみる？`, r.m);
+                setSpeech({ text: `「${userInput}」のレシピだね！別タブで開くよ。作り方をチェックしてみてね♪`, menu: userInput });
+                openRecipe(userInput);
                 setUserInput("");
             };
 
@@ -113,7 +98,7 @@
                         {filteredData.map((d, i) => (
                             <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border-l-8 border-green-600 flex justify-between items-center fade-in">
                                 <div><div className="font-bold text-lg text-gray-700">{d.item}</div><div className="text-sm text-blue-600 underline">{d.store}</div></div>
-                                <div className="text-right font-black text-orange-600 italic text-2xl">¥{d.price}</div>
+                                <div className="text-right font-black text-orange-600 italic text-2xl leading-none">¥{d.price}</div>
                             </div>
                         ))}
                     </main>
@@ -122,14 +107,10 @@
                         {speech && (
                             <div className="bg-white p-4 rounded-3xl shadow-2xl text-sm mb-4 mr-2 border-2 border-green-500 max-w-[260px] fade-in relative pointer-events-auto">
                                 <button onClick={() => setSpeech(null)} className="absolute top-1 right-3 text-gray-400 text-lg">×</button>
-                                <p className="font-medium text-gray-700 leading-relaxed pr-4">{speech.text}</p>
+                                <p className="font-medium text-gray-700 leading-relaxed pr-4 whitespace-pre-wrap">{speech.text}</p>
                                 {speech.menu && (
-                                    <div className="mt-3 flex justify-center">
-                                        <a href={`https://www.google.com/search?q=${encodeURIComponent(speech.menu + ' レシピ')}`} 
-                                           target="_blank" rel="noopener noreferrer"
-                                           className="bg-green-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-green-700 flex items-center gap-1 animate-bounce">
-                                           🍳 レシピを検索
-                                        </a>
+                                    <div className="mt-2 text-[10px] text-blue-500 underline">
+                                        <a href={`https://www.google.com/search?q=${encodeURIComponent(speech.menu + ' レシピ')}`} target="_blank" rel="noopener noreferrer">開かない場合はここをタップ</a>
                                     </div>
                                 )}
                                 <div className="absolute bottom-[-10px] right-10 w-5 h-5 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
@@ -139,7 +120,7 @@
                         <div className="flex items-center gap-2 pointer-events-auto relative">
                             <span className="absolute -top-4 right-0 text-[10px] text-gray-300">Ver {VERSION}</span>
                             <form onSubmit={handleInputConsult} className="bg-white rounded-full shadow-xl border-2 border-green-500 flex overflow-hidden max-w-[180px]">
-                                <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="響に相談..." className="px-4 py-2 text-sm outline-none w-full bg-transparent" />
+                                <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="レシピを検索..." className="px-4 py-2 text-sm outline-none w-full bg-transparent" />
                                 <button type="submit" className="bg-green-500 text-white px-3 font-bold">Go</button>
                             </form>
                             <img src={AVATAR_URL} onClick={handleAutoConsult} className="w-24 h-auto avatar-anim cursor-pointer drop-shadow-2xl" style={{ objectFit: 'contain' }} />
