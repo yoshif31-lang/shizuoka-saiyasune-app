@@ -24,13 +24,13 @@
         const CSV_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/supermarket_prices.csv";
         const AVATAR_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png";
         const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
-        const VERSION = "31.0";
+        const VERSION = "32.0";
 
         const GREETINGS = [
-            "響だよ！レシピを検索したよ♪",
-            "こんにちは、響です！美味しそうなレシピ、見つかるかな？",
-            "任せて！響がレシピページへ案内するね！",
-            "やっほー！この食材で美味しいもの作っちゃお！"
+            "響だよ！今日もいいもの見つけてきたよ♪",
+            "こんにちは、響です！今日のお買い物のアドバイスするね！",
+            "お疲れ様！響が今日のイチオシを教えるね♪",
+            "やっほー！響と一緒に今日の献立考えよ！"
         ];
 
         const App = () => {
@@ -68,18 +68,22 @@
                 window.open(url, '_blank');
             };
 
+            // 響をタップした時は「紹介」だけ
             const handleAutoConsult = () => {
                 if (filteredData.length === 0) return setSpeech({ text: "今はデータがないみたい...。" });
                 const best = filteredData[0];
                 const greet = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-                setSpeech({ text: `${greet}\n今一番お得な「${best.item}」のレシピを開くね！`, menu: best.item });
-                openRecipe(best.item);
+                setSpeech({ 
+                    text: `${greet}\n今、${best.item}が¥${best.price}ですごくお得だよ！レシピを見てみる？`, 
+                    menu: best.item 
+                });
             };
 
+            // 相談入力した時は「即検索」
             const handleInputConsult = (e) => {
                 e.preventDefault();
                 if (!userInput) return;
-                setSpeech({ text: `「${userInput}」のレシピだね！別タブで開くよ。作り方をチェックしてみてね♪`, menu: userInput });
+                setSpeech({ text: `「${userInput}」のレシピだね！別タブで開くよ♪`, menu: userInput });
                 openRecipe(userInput);
                 setUserInput("");
             };
@@ -109,8 +113,11 @@
                                 <button onClick={() => setSpeech(null)} className="absolute top-1 right-3 text-gray-400 text-lg">×</button>
                                 <p className="font-medium text-gray-700 leading-relaxed pr-4 whitespace-pre-wrap">{speech.text}</p>
                                 {speech.menu && (
-                                    <div className="mt-2 text-[10px] text-blue-500 underline">
-                                        <a href={`https://www.google.com/search?q=${encodeURIComponent(speech.menu + ' レシピ')}`} target="_blank" rel="noopener noreferrer">開かない場合はここをタップ</a>
+                                    <div className="mt-3 flex justify-center">
+                                        <button onClick={() => openRecipe(speech.menu)} 
+                                           className="bg-green-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-green-700 flex items-center gap-1 animate-bounce">
+                                           🍳 レシピを検索
+                                        </button>
                                     </div>
                                 )}
                                 <div className="absolute bottom-[-10px] right-10 w-5 h-5 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
