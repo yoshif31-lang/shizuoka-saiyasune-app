@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ</title>
+    <title>静岡最安値ナビ V14</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,6 +13,8 @@
         @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         .avatar-anim { animation: heartbeat 3s infinite ease-in-out; }
         .tab-active { background-color: #166534; color: white; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-pink-50 text-gray-800 font-sans">
@@ -22,13 +24,24 @@
         const { useState, useEffect, useMemo } = React;
 
         const CSV_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/supermarket_prices.csv";
+        const AVATAR_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/hibiki.jpg";
         const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
+
+        // 献立相談の知恵袋
+        const RECIPE_IDEAS = {
+            "たまご": { menu: "ニラ玉炒め", msg: "たまごが安いね！ニラと一緒にサッと炒めてスタミナつけよ！" },
+            "キャベツ": { menu: "お好み焼き", msg: "キャベツが底値だよ！粉もんでお腹いっぱいにしちゃおう。" },
+            "牛乳": { menu: "クリームシチュー", msg: "牛乳がお得！今夜は温かいシチューなんてどうかな？" },
+            "鶏肉": { menu: "親子丼", msg: "鶏肉が安い！たまごと合わせてトロトロの親子丼に決まり！" },
+            "豚肉": { menu: "冷しゃぶ", msg: "豚肉が安いよ！さっぱり冷しゃぶで決まりだね。" },
+            "default": { menu: "野菜炒め", msg: "安い食材を全部入れて、豪華な野菜炒めにしちゃおう！" }
+        };
 
         const App = () => {
             const [data, setData] = useState([]);
             const [activeArea, setActiveArea] = useState("すべて");
-            const [viewMode, setViewMode] = useState("lowest"); // 'lowest' or 'sale'
-            const [loading, setLoading] = useState(true);
+            const [viewMode, setViewMode] = useState("lowest");
+            const [speech, setSpeech] = useState("");
 
             useEffect(() => {
                 const fetchData = async () => {
@@ -40,35 +53,36 @@
                             const [item, price, store, address, date] = row.split(',');
                             return { item, price: parseInt(price), store, address, date: date?.trim() };
                         }).filter(d => d.item && AREAS.some(a => (d.store + d.address).includes(a)));
-
                         setData(parsed);
-                        localStorage.setItem('shizuoka_data', JSON.stringify(parsed));
-                    } catch (e) {
-                        const saved = localStorage.getItem('shizuoka_data');
-                        if (saved) setData(JSON.parse(saved));
-                    } finally {
-                        setLoading(false);
-                    }
+                    } catch (e) { console.error(e); }
                 };
                 fetchData();
             }, []);
 
             const filteredData = useMemo(() => {
                 let list = data;
-                if (activeArea !== "すべて") {
-                    list = list.filter(d => (d.store + d.address).includes(activeArea));
-                }
+                if (activeArea !== "すべて") list = list.filter(d => (d.store + d.address).includes(activeArea));
                 if (viewMode === "lowest") {
                     const minMap = {};
-                    list.forEach(d => {
-                        if (!minMap[d.item] || d.price < minMap[d.item].price) minMap[d.item] = d;
-                    });
+                    list.forEach(d => { if (!minMap[d.item] || d.price < minMap[d.item].price) minMap[d.item] = d; });
                     return Object.values(minMap);
                 } else {
-                    const latestDate = [...new Set(list.map(d => d.date))].sort().reverse()[0];
-                    return list.filter(d => d.date === latestDate);
+                    const dates = [...new Set(list.map(d => d.date))].filter(Boolean).sort().reverse();
+                    return list.filter(d => d.date === dates[0]);
                 }
             }, [data, activeArea, viewMode]);
+
+            // 献立相談アクション
+            const handleConsult = () => {
+                if (filteredData.length === 0) {
+                    setSpeech("今はデータがないみたい...安売りを待とう！");
+                    return;
+                }
+                const bestItem = filteredData.sort((a, b) => a.price - b.price)[0];
+                const advice = RECIPE_IDEAS[bestItem.item] || RECIPE_IDEAS["default"];
+                setSpeech(`${advice.msg} おすすめは「${advice.menu}」だよ♪`);
+                setTimeout(() => setSpeech(""), 6000); // 6秒で消える
+            };
 
             return (
                 <div className="max-w-md mx-auto min-h-screen pb-20">
@@ -92,33 +106,33 @@
                     </div>
 
                     <main className="p-3 space-y-3">
-                        {filteredData.length > 0 ? filteredData.map((d, i) => (
+                        {filteredData.map((d, i) => (
                             <div key={i} className="bg-white p-3 rounded-xl shadow-sm border-l-4 border-green-600 flex justify-between items-center">
                                 <div>
-                                    <div className="flex items-center gap-1 font-bold text-gray-700">
-                                        <i data-lucide="shopping-bag" className="w-4 h-4 text-green-600"></i>
-                                        {d.item}
-                                    </div>
-                                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.store)}`} target="_blank" className="text-xs text-blue-500 underline flex items-center gap-1 mt-1">
-                                        <i data-lucide="map-pin" className="w-3 h-3"></i> {d.store}
-                                    </a>
+                                    <div className="font-bold text-gray-700">{d.item}</div>
+                                    <div className="text-xs text-blue-500 underline">{d.store}</div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-2xl font-black text-orange-600 leading-none">
-                                        <span className="text-sm font-normal">¥</span>{d.price}
-                                    </div>
+                                    <div className="text-2xl font-black text-orange-600 leading-none"><span className="text-sm font-normal">¥</span>{d.price}</div>
                                     <div className="text-[10px] text-gray-400 mt-1">{d.date}</div>
                                 </div>
                             </div>
-                        )) : <div className="text-center py-20 text-gray-400">データが見つからないよ...</div>}
+                        ))}
                     </main>
 
-                    <div className="fixed bottom-4 right-4 flex flex-col items-end pointer-events-none">
-                        <div className="bg-white p-2 rounded-lg shadow-lg text-[10px] mb-2 border border-green-200 opacity-90">
-                            {activeArea}の{viewMode === 'lowest' ? '底値' : '特売'}を守ってるよ♪
-                        </div>
-                        <img src="https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/hibiki_avatar.png" 
-                             className="w-16 h-16 rounded-full border-4 border-white shadow-xl avatar-anim pointer-events-auto"
+                    {/* 響アバターと吹き出し */}
+                    <div className="fixed bottom-4 right-4 flex flex-col items-end z-50">
+                        {speech && (
+                            <div className="bg-white p-3 rounded-2xl shadow-2xl text-xs mb-2 border-2 border-green-500 max-w-[200px] fade-in relative">
+                                {speech}
+                                <div className="absolute bottom-[-8px] right-6 w-3 h-3 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
+                            </div>
+                        )}
+                        {!speech && (
+                            <div className="bg-white px-2 py-1 rounded-full shadow text-[10px] mb-1 opacity-80 border">タップして献立相談！</div>
+                        )}
+                        <img src={AVATAR_URL} onClick={handleConsult}
+                             className="w-16 h-16 rounded-full border-4 border-white shadow-xl avatar-anim cursor-pointer object-cover"
                              onError={(e) => { e.target.src = 'https://api.dicebear.com/7.x/adventurer/svg?seed=Hibiki' }} />
                     </div>
                 </div>
