@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ V20</title>
+    <title>静岡最安値ナビ V21</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -26,45 +26,24 @@
         const AVATAR_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png";
         const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
 
-        // 献立データベース：キー名とCSVの食材名をガッチリ一致させたよ
         const RECIPE_DB = {
-            "たまご": [
-                { m: "ニラ玉炒め", t: "ササッと作れてスタミナ満点！" },
-                { m: "オムレツ", t: "バターの香りで幸せ気分♪" },
-                { m: "だし巻き卵", t: "お弁当の主役になれるよ。" },
-                { m: "卵かけご飯", t: "良い卵ならシンプルが一番！" }
+            "たまご|卵|タマゴ": [
+                { m: "ニラ玉炒め", t: "スタミナ満点！" }, { m: "オムレツ", t: "バターで幸せ気分♪" }, { m: "だし巻き卵", t: "お弁当の主役！" }
             ],
             "キャベツ": [
-                { m: "お好み焼き", t: "たっぷり入れてヘルシーに！" },
-                { m: "回鍋肉", t: "甘辛い味噌でご飯が止まらない。" },
-                { m: "コールスロー", t: "お肉料理の相棒に最高だね。" },
-                { m: "ロールキャベツ", t: "じっくり煮込んでトロトロに♪" }
+                { m: "お好み焼き", t: "ヘルシーにお腹いっぱい！" }, { m: "回鍋肉", t: "白米が進むよ！" }, { m: "ロールキャベツ", t: "トロトロ煮込み♪" }
             ],
-            "豚肉": [
-                { m: "生姜焼き", t: "定番だけど最強のメニュー！" },
-                { m: "豚汁", t: "野菜の旨みが染み渡るよ。" },
-                { m: "冷しゃぶ", t: "ポン酢でさっぱり食べよう。" },
-                { m: "ポークカレー", t: "大きめお肉で贅沢にね！" }
+            "豚肉|豚バラ|豚こま": [
+                { m: "生姜焼き", t: "定番だけど最強！" }, { m: "豚汁", t: "野菜たっぷり！" }, { m: "冷しゃぶ", t: "さっぱり食べよう。" }
             ],
-            "鶏肉": [
-                { m: "親子丼", t: "卵とのハーモニーを楽しんで。" },
-                { m: "唐揚げ", t: "揚げたてにレモンを絞って！" },
-                { m: "照り焼きチキン", t: "タレが絡んで最高のおかず。" },
-                { m: "鶏ハム", t: "ヘルシーなのにしっとり美味しい。" }
+            "鶏肉|もも肉|むね肉": [
+                { m: "親子丼", t: "卵との相性抜群！" }, { m: "唐揚げ", t: "サクサクが最高！" }, { m: "照り焼き", t: "甘辛ダレが最高。" }
             ],
             "豆腐": [
-                { m: "麻婆豆腐", t: "ピリ辛で食欲アップだね！" },
-                { m: "揚げ出し豆腐", t: "優しいお出汁に癒されよう。" },
-                { m: "白和え", t: "お野菜と一緒にヘルシーに。" }
-            ],
-            "牛乳": [
-                { m: "クリームシチュー", t: "寒い夜にはこれで決まり！" },
-                { m: "フレンチトースト", t: "甘い香りで最高な朝を♪" }
+                { m: "麻婆豆腐", t: "ピリ辛で食欲アップ！" }, { m: "揚げ出し豆腐", t: "お出汁でほっこり。" }
             ],
             "default": [
-                { m: "具だくさんカレー", t: "困った時の万能メニュー！" },
-                { m: "野菜炒め", t: "冷蔵庫をスッキリさせよう。" },
-                { m: "焼きそば", t: "パパッと作れる力強い味方。" }
+                { m: "特製カレー", t: "何を入れても正解！" }, { m: "野菜炒め", t: "冷蔵庫をスッキリ！" }, { m: "お鍋", t: "好きな具材を全部入れよ♪" }
             ]
         };
 
@@ -100,9 +79,12 @@
 
             const talk = (msg) => { setSpeech(msg); setTimeout(() => setSpeech(""), 8000); };
 
-            // 強化された判定ロジック
-            const getAdvice = (itemName) => {
-                const key = Object.keys(RECIPE_DB).find(k => itemName.includes(k));
+            // 【強化】食材名を柔軟に判定する関数
+            const findRecipe = (keyword) => {
+                const key = Object.keys(RECIPE_DB).find(k => {
+                    const regex = new RegExp(k, 'i');
+                    return regex.test(keyword);
+                });
                 const choices = RECIPE_DB[key] || RECIPE_DB["default"];
                 return choices[Math.floor(Math.random() * choices.length)];
             };
@@ -110,37 +92,36 @@
             const handleAutoConsult = () => {
                 const areaLabel = activeArea === "すべて" ? "静岡" : activeArea;
                 if (filteredData.length === 0) return talk(`${areaLabel}のデータがないよ...`);
-                
                 const best = filteredData[0];
-                const r = getAdvice(best.item);
-                talk(`${areaLabel}は「${best.item}」が¥${best.price}でお得！これで【${r.m}】はどう？ ${r.t}`);
+                const r = findRecipe(best.item);
+                talk(`${areaLabel}は「${best.item}」が¥${best.price}でお得！【${r.m}】はどう？ ${r.t}`);
             };
 
             const handleInputConsult = (e) => {
                 e.preventDefault();
                 if (!userInput) return;
-                const r = getAdvice(userInput);
+                const r = findRecipe(userInput);
                 talk(`「${userInput}」なら【${r.m}】がおすすめ！ ${r.t}`);
                 setUserInput("");
             };
 
             return (
                 <div className="max-w-md mx-auto min-h-screen pb-40">
-                    <header className="bg-green-800 text-white p-4 sticky top-0 z-10 shadow-lg text-center font-bold text-xl">静岡最安値ナビ V20</header>
-                    <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-[60px] z-10 shadow-sm">
+                    <header className="bg-green-800 text-white p-4 sticky top-0 z-10 shadow-lg text-center font-bold text-xl">静岡最安値ナビ V21</header>
+                    <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-[60px] z-10">
                         {AREAS.map(a => (
-                            <button key={a} onClick={() => setActiveArea(a)} className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition-all ${activeArea === a ? 'bg-white text-green-800 shadow' : 'bg-green-600 text-white opacity-80'}`}>{a}</button>
+                            <button key={a} onClick={() => setActiveArea(a)} className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition-all ${activeArea === a ? 'bg-white text-green-800' : 'bg-green-600 text-white'}`}>{a}</button>
                         ))}
                     </div>
                     <form onSubmit={handleInputConsult} className="p-3 bg-white border-b flex gap-2 sticky top-[102px] z-10 shadow-sm">
-                        <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="食材名でレシピ相談..." className="flex-1 border-2 border-green-100 rounded-xl px-4 py-2 text-sm outline-none bg-gray-50 focus:border-green-400 transition-colors" />
-                        <button type="submit" className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg active:scale-95 transition-transform">相談</button>
+                        <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="卵、肉など入力..." className="flex-1 border-2 border-green-100 rounded-xl px-4 py-2 text-sm outline-none bg-gray-50 focus:border-green-400" />
+                        <button type="submit" className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg">相談</button>
                     </form>
                     <main className="p-3 space-y-3">
                         {filteredData.map((d, i) => (
                             <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border-l-8 border-green-600 flex justify-between items-center fade-in">
-                                <div><div className="font-bold text-lg text-gray-700">{d.item}</div><div className="text-sm text-blue-600 font-medium underline">{d.store}</div></div>
-                                <div className="text-right"><div className="text-2xl font-black text-orange-600 italic leading-none"><span className="text-sm font-normal mr-1">¥</span>{d.price}</div><div className="text-[10px] text-gray-400 mt-2 font-mono">{d.date}</div></div>
+                                <div><div className="font-bold text-lg text-gray-700">{d.item}</div><div className="text-sm text-blue-600 underline">{d.store}</div></div>
+                                <div className="text-right"><div className="text-2xl font-black text-orange-600 italic">¥{d.price}</div><div className="text-[10px] text-gray-400 mt-2 font-mono">{d.date}</div></div>
                             </div>
                         ))}
                     </main>
