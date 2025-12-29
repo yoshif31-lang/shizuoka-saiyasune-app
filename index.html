@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>静岡最安値ナビ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .avatar-anim { animation: heartbeat 3s infinite ease-in-out; }
+        .tab-active { background-color: #166534; color: white; }
+    </style>
+</head>
+<body class="bg-pink-50 text-gray-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const CSV_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/supermarket_prices.csv";
+        const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
+
+        const App = () => {
+            const [data, setData] = useState([]);
+            const [activeArea, setActiveArea] = useState("すべて");
+            const [viewMode, setViewMode] = useState("lowest"); // 'lowest' or 'sale'
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const fetchData = async () => {
+                    try {
+                        const res = await fetch(CSV_URL);
+                        const text = await res.text();
+                        const rows = text.split('\n').slice(1);
+                        const parsed = rows.map(row => {
+                            const [item, price, store, address, date] = row.split(',');
+                            return { item, price: parseInt(price), store, address, date: date?.trim() };
+                        }).filter(d => d.item && AREAS.some(a => (d.store + d.address).includes(a)));
+
+                        setData(parsed);
+                        localStorage.setItem('shizuoka_data', JSON.stringify(parsed));
+                    } catch (e) {
+                        const saved = localStorage.getItem('shizuoka_data');
+                        if (saved) setData(JSON.parse(saved));
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                fetchData();
+            }, []);
+
+            const filteredData = useMemo(() => {
+                let list = data;
+                if (activeArea !== "すべて") {
+                    list = list.filter(d => (d.store + d.address).includes(activeArea));
+                }
+                if (viewMode === "lowest") {
+                    const minMap = {};
+                    list.forEach(d => {
+                        if (!minMap[d.item] || d.price < minMap[d.item].price) minMap[d.item] = d;
+                    });
+                    return Object.values(minMap);
+                } else {
+                    const latestDate = [...new Set(list.map(d => d.date))].sort().reverse()[0];
+                    return list.filter(d => d.date === latestDate);
+                }
+            }, [data, activeArea, viewMode]);
+
+            return (
+                <div className="max-w-md mx-auto min-h-screen pb-20">
+                    <header className="bg-green-800 text-white p-2 flex justify-between items-center sticky top-0 z-10 shadow-md">
+                        <h1 className="font-bold text-lg">静岡最安値ナビ</h1>
+                        <span className="text-xs opacity-80">{new Date().toLocaleDateString()}</span>
+                    </header>
+
+                    <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-11 z-10">
+                        {AREAS.map(a => (
+                            <button key={a} onClick={() => setActiveArea(a)} 
+                                className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${activeArea === a ? 'bg-white text-green-800' : 'bg-green-600 text-white'}`}>
+                                {a}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex p-2 gap-2 justify-center">
+                        <button onClick={() => setViewMode('lowest')} className={`flex-1 py-1 text-sm rounded ${viewMode === 'lowest' ? 'tab-active' : 'bg-white border'}`}>最安値</button>
+                        <button onClick={() => setViewMode('sale')} className={`flex-1 py-1 text-sm rounded ${viewMode === 'sale' ? 'tab-active' : 'bg-white border'}`}>最新特売</button>
+                    </div>
+
+                    <main className="p-3 space-y-3">
+                        {filteredData.length > 0 ? filteredData.map((d, i) => (
+                            <div key={i} className="bg-white p-3 rounded-xl shadow-sm border-l-4 border-green-600 flex justify-between items-center">
+                                <div>
+                                    <div className="flex items-center gap-1 font-bold text-gray-700">
+                                        <i data-lucide="shopping-bag" className="w-4 h-4 text-green-600"></i>
+                                        {d.item}
+                                    </div>
+                                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.store)}`} target="_blank" className="text-xs text-blue-500 underline flex items-center gap-1 mt-1">
+                                        <i data-lucide="map-pin" className="w-3 h-3"></i> {d.store}
+                                    </a>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-2xl font-black text-orange-600 leading-none">
+                                        <span className="text-sm font-normal">¥</span>{d.price}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 mt-1">{d.date}</div>
+                                </div>
+                            </div>
+                        )) : <div className="text-center py-20 text-gray-400">データが見つからないよ...</div>}
+                    </main>
+
+                    <div className="fixed bottom-4 right-4 flex flex-col items-end pointer-events-none">
+                        <div className="bg-white p-2 rounded-lg shadow-lg text-[10px] mb-2 border border-green-200 opacity-90">
+                            {activeArea}の{viewMode === 'lowest' ? '底値' : '特売'}を守ってるよ♪
+                        </div>
+                        <img src="https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/hibiki_avatar.png" 
+                             className="w-16 h-16 rounded-full border-4 border-white shadow-xl avatar-anim pointer-events-auto"
+                             onError={(e) => { e.target.src = 'https://api.dicebear.com/7.x/adventurer/svg?seed=Hibiki' }} />
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+        setTimeout(() => lucide.createIcons(), 500);
+    </script>
+</body>
+</html>
