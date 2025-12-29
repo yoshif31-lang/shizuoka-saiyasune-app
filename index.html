@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ V15</title>
+    <title>静岡最安値ナビ V16</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -24,17 +24,38 @@
         const { useState, useEffect, useMemo } = React;
 
         const CSV_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/supermarket_prices.csv";
-        // あなたの最新のファイル名に固定したよ！
         const AVATAR_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png";
         const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
 
-        const RECIPE_IDEAS = {
-            "たまご": { menu: "ニラ玉炒め", msg: "たまごが安いね！ニラと一緒にサッと炒めてスタミナつけよ！" },
-            "キャベツ": { menu: "お好み焼き", msg: "キャベツが底値だよ！粉もんでお腹いっぱいにしちゃおう。" },
-            "牛乳": { menu: "クリームシチュー", msg: "牛乳がお得！今夜は温かいシチューなんてどうかな？" },
-            "鶏肉": { menu: "親子丼", msg: "鶏肉が安い！たまごと合わせてトロトロの親子丼に決まり！" },
-            "豚肉": { menu: "冷しゃぶ", msg: "豚肉が安いよ！さっぱり冷しゃぶで決まりだね。" },
-            "default": { menu: "野菜炒め", msg: "安い食材を全部入れて、豪華な野菜炒めにしちゃおう！" }
+        // 献立データベース
+        const RECIPE_DB = {
+            "たまご": [
+                { m: "ニラ玉炒め", t: "ニラと炒めてスタミナアップ！" },
+                { m: "とろとろオムレツ", t: "バターたっぷりで幸せ気分♪" }
+            ],
+            "キャベツ": [
+                { m: "お好み焼き", t: "粉もんでお腹いっぱいにしよ！" },
+                { m: "回鍋肉", t: "お肉と一緒に味噌炒めだね。" }
+            ],
+            "鶏肉": [
+                { m: "親子丼", t: "トロトロの卵と合わせて最高！" },
+                { m: "鶏の唐揚げ", t: "やっぱりみんな大好き唐揚げ！" }
+            ],
+            "豚肉": [
+                { m: "豚の生姜焼き", t: "ご飯が止まらなくなるよ！" },
+                { m: "冷しゃぶサラダ", t: "さっぱりポン酢で食べよう。" }
+            ],
+            "牛乳": [
+                { m: "クリームシチュー", t: "寒い日は温まろう♪" },
+                { m: "フレンチトースト", t: "朝ごはんにもピッタリ！" }
+            ],
+            "豆腐": [
+                { m: "麻婆豆腐", t: "ピリ辛でご飯が進むよ！" },
+                { m: "揚げ出し豆腐", t: "お出汁でほっこりしよ。" }
+            ],
+            "default": [
+                { m: "特製野菜炒め", t: "冷蔵庫の余り物を全部入れちゃお！" }
+            ]
         };
 
         const App = () => {
@@ -42,6 +63,7 @@
             const [activeArea, setActiveArea] = useState("すべて");
             const [viewMode, setViewMode] = useState("lowest");
             const [speech, setSpeech] = useState("");
+            const [userInput, setUserInput] = useState("");
 
             useEffect(() => {
                 const fetchData = async () => {
@@ -51,8 +73,8 @@
                         const rows = text.split('\n').slice(1);
                         const parsed = rows.map(row => {
                             const [item, price, store, address, date] = row.split(',');
-                            return { item, price: parseInt(price), store, address, date: date?.trim() };
-                        }).filter(d => d.item && AREAS.some(a => (d.store + d.address).includes(a)));
+                            return { item: item?.trim(), price: parseInt(price), store: store?.trim(), address: address?.trim(), date: date?.trim() };
+                        }).filter(d => d.item);
                         setData(parsed);
                     } catch (e) { console.error(e); }
                 };
@@ -66,66 +88,86 @@
                     const minMap = {};
                     list.forEach(d => { if (!minMap[d.item] || d.price < minMap[d.item].price) minMap[d.item] = d; });
                     return Object.values(minMap);
-                } else {
-                    const dates = [...new Set(list.map(d => d.date))].filter(Boolean).sort().reverse();
-                    return list.filter(d => d.date === dates[0]);
                 }
+                return list;
             }, [data, activeArea, viewMode]);
 
-            const handleConsult = () => {
-                if (filteredData.length === 0) {
-                    setSpeech("今はデータがないみたい...安売りを待とう！");
-                    return;
-                }
-                const bestItem = filteredData.sort((a, b) => a.price - b.price)[0];
-                const advice = RECIPE_IDEAS[bestItem.item] || RECIPE_IDEAS["default"];
-                setSpeech(`${advice.msg} おすすめは「${advice.menu}」だよ♪`);
-                setTimeout(() => setSpeech(""), 6000);
+            const talk = (msg) => { setSpeech(msg); setTimeout(() => setSpeech(""), 8000); };
+
+            // エリア連動の自動提案
+            const handleAutoConsult = () => {
+                const areaLabel = activeArea === "すべて" ? "静岡" : activeArea;
+                if (filteredData.length === 0) return talk(`${areaLabel}のデータがまだないみたい...`);
+                
+                // そのエリアで一番安い食材を特定
+                const sorted = [...filteredData].sort((a, b) => a.price - b.price);
+                const best = sorted[0];
+                const recipes = RECIPE_DB[best.item] || RECIPE_DB["default"];
+                const r = recipes[Math.floor(Math.random() * recipes.length)];
+                talk(`${areaLabel}では「${best.item}」が¥${best.price}で一番お得だよ！おすすめ献立は【${r.m}】！${r.t}`);
+            };
+
+            // 入力フォームからの相談
+            const handleInputConsult = (e) => {
+                e.preventDefault();
+                if (!userInput) return;
+                const match = RECIPE_DB[userInput] || RECIPE_DB["default"];
+                const r = match[Math.floor(Math.random() * match.length)];
+                talk(`「${userInput}」を使うなら【${r.m}】はどうかな？ ${r.t}`);
+                setUserInput("");
             };
 
             return (
-                <div className="max-w-md mx-auto min-h-screen pb-20">
-                    <header className="bg-green-800 text-white p-2 flex justify-between items-center sticky top-0 z-10 shadow-md">
-                        <h1 className="font-bold text-lg">静岡最安値ナビ</h1>
+                <div className="max-w-md mx-auto min-h-screen pb-40">
+                    <header className="bg-green-800 text-white p-3 sticky top-0 z-10 shadow-lg text-center">
+                        <h1 className="font-bold text-xl tracking-widest">静岡最安値ナビ</h1>
                     </header>
-                    <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-11 z-10">
+                    
+                    <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-[52px] z-10">
                         {AREAS.map(a => (
                             <button key={a} onClick={() => setActiveArea(a)} 
-                                className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${activeArea === a ? 'bg-white text-green-800' : 'bg-green-600 text-white'}`}>
+                                className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition ${activeArea === a ? 'bg-white text-green-800 shadow' : 'bg-green-600 text-white'}`}>
                                 {a}
                             </button>
                         ))}
                     </div>
-                    <div className="flex p-2 gap-2 justify-center">
-                        <button onClick={() => setViewMode('lowest')} className={`flex-1 py-1 text-sm rounded ${viewMode === 'lowest' ? 'tab-active' : 'bg-white border'}`}>最安値</button>
-                        <button onClick={() => setViewMode('sale')} className={`flex-1 py-1 text-sm rounded ${viewMode === 'sale' ? 'tab-active' : 'bg-white border'}`}>最新特売</button>
-                    </div>
+
+                    <form onSubmit={handleInputConsult} className="p-3 bg-white border-b flex gap-2 sticky top-[94px] z-10 shadow-sm">
+                        <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)}
+                               placeholder="食材名でレシピ相談..." className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:border-green-500 bg-gray-50" />
+                        <button type="submit" className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md active:bg-orange-600">相談</button>
+                    </form>
+
                     <main className="p-3 space-y-3">
-                        {filteredData.map((d, i) => (
-                            <div key={i} className="bg-white p-3 rounded-xl shadow-sm border-l-4 border-green-600 flex justify-between items-center">
-                                <div>
-                                    <div className="font-bold text-gray-700">{d.item}</div>
-                                    <div className="text-xs text-blue-500 underline">{d.store}</div>
+                        {filteredData.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400 text-sm">データが見つからないよ...</div>
+                        ) : (
+                            filteredData.map((d, i) => (
+                                <div key={i} className="bg-white p-4 rounded-xl shadow-sm border-l-8 border-green-600 flex justify-between items-center fade-in">
+                                    <div>
+                                        <div className="font-bold text-lg text-gray-700">{d.item}</div>
+                                        <div className="text-sm text-blue-600 font-medium underline">{d.store}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-black text-orange-600 italic leading-none"><span className="text-sm font-normal mr-1">¥</span>{d.price}</div>
+                                        <div className="text-[10px] text-gray-400 mt-2">{d.date}</div>
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-2xl font-black text-orange-600 leading-none"><span className="text-sm font-normal">¥</span>{d.price}</div>
-                                    <div className="text-[10px] text-gray-400 mt-1">{d.date}</div>
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </main>
 
-                    {/* アバター表示エリア：丸枠を外して体全体が見えるようにしたよ */}
+                    {/* アバター＆吹き出し */}
                     <div className="fixed bottom-0 right-2 flex flex-col items-end z-50 pointer-events-none">
                         {speech && (
-                            <div className="bg-white p-3 rounded-2xl shadow-2xl text-xs mb-[-10px] mr-4 border-2 border-green-500 max-w-[180px] fade-in relative pointer-events-auto">
-                                {speech}
-                                <div className="absolute bottom-[-8px] right-6 w-3 h-3 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
+                            <div className="bg-white p-4 rounded-2xl shadow-2xl text-sm mb-[-5px] mr-4 border-2 border-green-500 max-w-[220px] fade-in relative pointer-events-auto">
+                                <p className="leading-relaxed text-gray-700">{speech}</p>
+                                <div className="absolute bottom-[-9px] right-8 w-4 h-4 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
                             </div>
                         )}
-                        <img src={AVATAR_URL} onClick={handleConsult}
+                        <img src={AVATAR_URL} onClick={handleAutoConsult}
                              className="w-32 h-auto avatar-anim cursor-pointer drop-shadow-2xl pointer-events-auto"
-                             style={{ maxHeight: '220px', objectFit: 'contain' }}
+                             style={{ maxHeight: '250px', objectFit: 'contain' }}
                              onError={(e) => { e.target.src = 'https://api.dicebear.com/7.x/adventurer/svg?seed=Hibiki' }} />
                     </div>
                 </div>
