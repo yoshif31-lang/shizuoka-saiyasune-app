@@ -24,7 +24,7 @@
         const CSV_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/supermarket_prices.csv";
         const AVATAR_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png";
         const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
-        const VERSION = "29.0";
+        const VERSION = "30.0";
 
         const RECIPE_DB = {
             "マグロ|まぐろ|鮪|刺身": [{ m: "マグロ丼" }, { m: "マグロの竜田揚げ" }],
@@ -57,7 +57,7 @@
                         const parsed = rows.map(row => {
                             const [item, price, store, address, date] = row.split(',');
                             return { item: item?.trim(), price: parseInt(price), store: store?.trim(), address: address?.trim(), date: date?.trim() };
-                        }).filter(d => d.item);
+                        }).map(d => ({...d, price: isNaN(d.price) ? 0 : d.price})).filter(d => d.item);
                         setData(parsed);
                     } catch (e) { console.error(e); }
                 };
@@ -95,18 +95,17 @@
                 e.preventDefault();
                 if (!userInput) return;
                 const r = findRecipe(userInput);
-                const greet = "任せて！";
-                talk(`${greet}「${userInput}」なら【${r.m}】がおすすめだよ！作り方も調べてみる？`, r.m);
+                talk(`任せて！「${userInput}」なら【${r.m}】がおすすめだよ！作り方も調べてみる？`, r.m);
                 setUserInput("");
             };
 
             return (
-                <div className="max-w-md mx-auto min-h-screen pb-48">
+                <div className="max-w-md mx-auto min-h-screen pb-48 relative">
                     <header className="bg-green-800 text-white p-4 sticky top-0 z-10 text-center font-bold text-xl shadow-lg tracking-widest">静岡最安値ナビ</header>
                     
                     <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-[60px] z-10 shadow-sm">
                         {AREAS.map(a => (
-                            <button key(a) onClick={() => {setActiveArea(a); setSpeech(null);}} className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition-all ${activeArea === a ? 'bg-white text-green-800 shadow' : 'bg-green-600 text-white'}`}>{a}</button>
+                            <button key={a} onClick={() => {setActiveArea(a); setSpeech(null);}} className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition-all ${activeArea === a ? 'bg-white text-green-800 shadow' : 'bg-green-600 text-white'}`}>{a}</button>
                         ))}
                     </div>
 
@@ -133,13 +132,14 @@
                                         </a>
                                     </div>
                                 )}
+                                <div className="absolute bottom-[-10px] right-10 w-5 h-5 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
                             </div>
                         )}
                         
                         <div className="flex items-center gap-2 pointer-events-auto relative">
                             <span className="absolute -top-4 right-0 text-[10px] text-gray-300">Ver {VERSION}</span>
                             <form onSubmit={handleInputConsult} className="bg-white rounded-full shadow-xl border-2 border-green-500 flex overflow-hidden max-w-[180px]">
-                                <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="響に相談..." className="px-4 py-2 text-sm outline-none w-full" />
+                                <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="響に相談..." className="px-4 py-2 text-sm outline-none w-full bg-transparent" />
                                 <button type="submit" className="bg-green-500 text-white px-3 font-bold">Go</button>
                             </form>
                             <img src={AVATAR_URL} onClick={handleAutoConsult} className="w-24 h-auto avatar-anim cursor-pointer drop-shadow-2xl" style={{ objectFit: 'contain' }} />
