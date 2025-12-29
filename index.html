@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ V24</title>
+    <title>静岡最安値ナビ V26</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -26,12 +26,12 @@
         const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
 
         const RECIPE_DB = {
-            "きゅうり|キュウリ": [{ m: "たたききゅうり" }, { m: "きゅうりの浅漬け" }],
-            "なす|ナス": [{ m: "なすの煮浸し" }, { m: "麻婆なす" }],
-            "たまご|卵": [{ m: "ニラ玉炒め" }, { m: "オムレツ" }],
+            "マグロ|まぐろ|鮪|刺身|魚": [{ m: "マグロ丼" }, { m: "マグロの竜田揚げ" }],
+            "キャベツ": [{ m: "お好み焼き" }, { m: "回鍋肉" }],
             "豚肉|豚バラ": [{ m: "生姜焼き" }, { m: "豚汁" }],
             "鶏肉|もも肉": [{ m: "親子丼" }, { m: "唐揚げ" }],
-            "default": [{ m: "カレーライス" }, { m: "野菜炒め" }]
+            "たまご|卵": [{ m: "ニラ玉炒め" }, { m: "オムレツ" }],
+            "きゅうり|キュウリ": [{ m: "たたききゅうり" }, { m: "きゅうりの浅漬け" }]
         };
 
         const App = () => {
@@ -66,47 +66,54 @@
 
             const talk = (text, menu) => {
                 setSpeech({ text, menu });
-                setTimeout(() => setSpeech(null), 12000); // 少し長めに表示
+                setTimeout(() => setSpeech(null), 12000);
             };
 
-            const findRecipe = (keyword) => {
+            // 全食材対応ロジック
+            const handleConsultLogic = (keyword) => {
                 const key = Object.keys(RECIPE_DB).find(k => new RegExp(k, 'i').test(keyword));
-                const choices = RECIPE_DB[key] || RECIPE_DB["default"];
-                return choices[Math.floor(Math.random() * choices.length)];
+                if (key) {
+                    const choices = RECIPE_DB[key];
+                    const r = choices[Math.floor(Math.random() * choices.length)];
+                    return { msg: `「${keyword}」なら【${r.m}】がおすすめ！`, menu: r.m };
+                } else {
+                    // リストにない食材の場合
+                    return { msg: `「${keyword}」だね！美味しそうなレシピを一緒に探してみよう！`, menu: keyword };
+                }
             };
 
             const handleAutoConsult = () => {
                 if (filteredData.length === 0) return talk("データがないよ...", null);
                 const best = filteredData[0];
-                const r = findRecipe(best.item);
-                talk(`${best.item}がお得だよ！【${r.m}】はどうかな？下のボタンをタップして作り方をチェックしてね！`, r.m);
+                const res = handleConsultLogic(best.item);
+                talk(`${best.item}が安いよ！${res.msg} 下のボタンをチェック！`, res.menu);
             };
 
             const handleInputConsult = (e) => {
                 e.preventDefault();
                 if (!userInput) return;
-                const r = findRecipe(userInput);
-                talk(`「${userInput}」なら【${r.m}】がおすすめ！下のボタンからレシピが見れるよ♪`, r.m);
+                const res = handleConsultLogic(userInput);
+                talk(res.msg, res.menu);
                 setUserInput("");
             };
 
             return (
                 <div className="max-w-md mx-auto min-h-screen pb-40">
-                    <header className="bg-green-800 text-white p-4 sticky top-0 z-10 text-center font-bold text-xl shadow-lg">静岡最安値ナビ V24</header>
+                    <header className="bg-green-800 text-white p-4 sticky top-0 z-10 text-center font-bold text-xl shadow-lg">静岡最安値ナビ V26</header>
                     <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-[60px] z-10 shadow-sm">
                         {AREAS.map(a => (
-                            <button key={a} onClick={() => setActiveArea(a)} className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition-all ${activeArea === a ? 'bg-white text-green-800 shadow' : 'bg-green-600 text-white'}`}>{a}</button>
+                            <button key={a} onClick={() => setActiveArea(a)} className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition-all ${activeArea === a ? 'bg-white text-green-800' : 'bg-green-600 text-white'}`}>{a}</button>
                         ))}
                     </div>
                     <form onSubmit={handleInputConsult} className="p-3 bg-white border-b flex gap-2 sticky top-[102px] z-10 shadow-sm">
-                        <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="食材名で相談..." className="flex-1 border-2 border-green-100 rounded-xl px-4 py-2 text-sm outline-none" />
+                        <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="食材名を入力（何でもOK！）" className="flex-1 border-2 border-green-100 rounded-xl px-4 py-2 text-sm outline-none bg-gray-50" />
                         <button type="submit" className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md">相談</button>
                     </form>
                     <main className="p-3 space-y-3">
                         {filteredData.map((d, i) => (
                             <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border-l-8 border-green-600 flex justify-between items-center fade-in">
-                                <div><div className="font-bold text-lg">{d.item}</div><div className="text-sm text-blue-600 underline">{d.store}</div></div>
-                                <div className="text-right font-black text-orange-600 italic text-2xl">¥{d.price}</div>
+                                <div><div className="font-bold text-lg text-gray-700">{d.item}</div><div className="text-sm text-blue-600 underline">{d.store}</div></div>
+                                <div className="text-right font-black text-orange-600 italic text-2xl leading-none">¥{d.price}</div>
                             </div>
                         ))}
                     </main>
@@ -114,15 +121,13 @@
                         {speech && (
                             <div className="bg-white p-4 rounded-3xl shadow-2xl text-sm mb-[-10px] mr-4 border-2 border-green-500 max-w-[240px] fade-in relative pointer-events-auto">
                                 <p className="font-medium text-gray-700 leading-relaxed">{speech.text}</p>
-                                {speech.menu && (
-                                    <div className="mt-3 flex justify-center">
-                                        <a href={`https://www.google.com/search?q=${encodeURIComponent(speech.menu + ' レシピ')}`} 
-                                           target="_blank" rel="noopener noreferrer"
-                                           className="bg-green-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-green-700 flex items-center gap-1 animate-bounce">
-                                           🍳 レシピを検索
-                                        </a>
-                                    </div>
-                                )}
+                                <div className="mt-3 flex justify-center">
+                                    <a href={`https://www.google.com/search?q=${encodeURIComponent(speech.menu + ' レシピ')}`} 
+                                       target="_blank" rel="noopener noreferrer"
+                                       className="bg-green-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-green-700 flex items-center gap-1 animate-bounce">
+                                       🍳 レシピを検索
+                                    </a>
+                                </div>
                                 <div className="absolute bottom-[-10px] right-10 w-5 h-5 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
                             </div>
                         )}
