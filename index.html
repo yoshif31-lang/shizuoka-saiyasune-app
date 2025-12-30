@@ -4,135 +4,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>静岡最安値ナビ | 響</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 1. 呼吸アニメーション（ふわふわ動く） */
         @keyframes breathe { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-        .hibiki-alive { animation: breathe 3s ease-in-out infinite; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1)); }
-
-        /* 2. 雪のアニメーション */
-        @keyframes snowfall { 0% { transform: translateY(-10vh) translateX(0); opacity: 1; } 100% { transform: translateY(100vh) translateX(20px); opacity: 0.5; } }
+        .hibiki-alive { animation: breathe 3s ease-in-out infinite; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1)); }
+        @keyframes snowfall { 0% { transform: translateY(-10vh) translateX(0); opacity: 1; } 100% { transform: translateY(100vh) translateX(20px); opacity: 0.4; } }
         .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
         .snowflake { position: absolute; top: -10px; background-color: white; border-radius: 50%; opacity: 0.8; animation: snowfall linear infinite; }
     </style>
 </head>
-<body class="bg-blue-50 text-gray-800">
-    <div id="root"></div>
+<body class="bg-emerald-50 text-gray-800">
+    <div id="snow-box" class="snow-container" style="display:none;"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        const BASE_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/";
+    <div class="min-h-screen p-4 flex flex-col items-center relative overflow-hidden">
+        <header class="text-center mb-6 z-10">
+            <h1 class="text-2xl font-black text-green-700 tracking-tighter">静岡最安値ナビ</h1>
+            <p class="text-[10px] text-green-600 font-bold uppercase tracking-widest">Fresh & Best Recipe Guide</p>
+        </header>
 
-        const App = () => {
-            const [prices, setPrices] = useState([]);
-            const [config, setConfig] = useState({ 
-                avatarUrl: BASE_URL + "1766939160101.png", 
-                showSnow: false, 
-                greeting: "読み込み中..." 
-            });
+        <div class="mb-4 text-center z-10 flex flex-col items-center">
+            <div class="w-24 h-24 rounded-full bg-white p-1 shadow-md border-2 border-green-200 overflow-hidden mb-2">
+                <img id="avatar-img" src="" alt="響" class="w-full h-full object-cover hibiki-alive">
+            </div>
+            <div class="bg-white py-1.5 px-5 rounded-full shadow-sm border border-green-100">
+                <p id="greeting-text" class="text-xs font-bold text-green-800">読み込み中...</p>
+            </div>
+        </div>
 
-            useEffect(() => {
-                // 1. 日付に基づいて設定を決める
-                const now = new Date();
-                const month = now.getMonth() + 1;
-                const date = now.getDate();
-                let img = "1766939160101.png"; // デフォルト（冬服がない場合はこれ）
-                let snow = false;
-                let text = "響だよ！今日の静岡の最安値をチェックしてね！";
+        <div id="recipe-section" class="mb-6 z-10 w-full max-w-md hidden">
+            <button id="recipe-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                🍳 <span>今日の激安食材でレシピを検索！</span>
+            </button>
+        </div>
 
-                // お正月判定 (1/1 - 1/3)
-                if (month === 1 && date <= 3) {
-                    img = "avatar_newyear.png";
-                    snow = true;
-                    text = "あけましておめでとう！今年もよろしくね♪";
-                } 
-                // 冬判定（雪だけ降らせる）
-                else if (month === 12 || month === 1 || month === 2) {
-                    snow = true;
-                    text = "寒いね〜。温かいものでも食べて暖まろっか！";
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border-b-4 border-green-200 overflow-hidden z-10">
+            <div class="bg-green-600 p-3 flex justify-between items-center">
+                <h2 class="text-white text-sm font-bold">本日のイチオシ最安値</h2>
+                <span id="update-date" class="text-[10px] text-green-100"></span>
+            </div>
+            <table class="w-full text-left">
+                <thead class="bg-green-50">
+                    <tr>
+                        <th class="p-3 text-xs font-bold text-green-700">商品名</th>
+                        <th class="p-3 text-xs font-bold text-green-700 text-center">価格</th>
+                        <th class="p-3 text-xs font-bold text-green-700">店舗</th>
+                    </tr>
+                </thead>
+                <tbody id="price-table" class="divide-y divide-green-50">
+                    <tr><td colspan="3" class="p-10 text-center text-gray-400 text-xs">情報をパトロール中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="mt-8 text-[9px] text-green-400 font-bold uppercase">© 2026 Shizuoka Saiyasune Navi</footer>
+    </div>
+
+    <script>
+        const BASE_URL = `https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/`;
+        let firstItem = ""; // レシピ検索用の食材名
+
+        function initApp() {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const avatarImg = document.getElementById('avatar-img');
+            const greeting = document.getElementById('greeting-text');
+            const snowBox = document.getElementById('snow-box');
+
+            let imgName = "1766939160101.png"; //
+            let showSnow = (month === 12 || month === 1 || month === 2);
+            let msg = "響だよ！静岡の安値は任せて♪";
+
+            if (month === 1 && date <= 3) {
+                imgName = "avatar_newyear.png"; //
+                msg = "あけおめ！今年もお得を探すよ♪";
+            } else if (showSnow) {
+                msg = "寒いね！お鍋の材料とかどう？";
+            }
+
+            avatarImg.src = BASE_URL + imgName;
+            greeting.innerText = msg;
+            if (showSnow) {
+                snowBox.style.display = "block";
+                for (let i = 0; i < 20; i++) {
+                    const flake = document.createElement('div');
+                    flake.className = 'snowflake';
+                    flake.style.left = Math.random() * 100 + '%';
+                    const size = Math.random() * 5 + 2 + 'px';
+                    flake.style.width = size; flake.style.height = size;
+                    flake.style.animationDuration = Math.random() * 5 + 5 + 's';
+                    flake.style.animationDelay = Math.random() * 5 + 's';
+                    snowBox.appendChild(flake);
+                }
+            }
+            avatarImg.onerror = () => { avatarImg.src = BASE_URL + "1766939160101.png"; };
+        }
+
+        async function fetchPrices() {
+            try {
+                // に基づくCSV取得
+                const response = await fetch(BASE_URL + 'supermarket_prices.csv');
+                if (!response.ok) throw new Error();
+                const data = await response.text();
+                const rows = data.split('\n').filter(r => r.trim()).slice(0, 15);
+                const tableBody = document.getElementById('price-table');
+                
+                if (rows.length > 0) {
+                    const cols = rows[0].split(',');
+                    firstItem = cols[0]; // 最初の食材をレシピ検索に使う
+                    document.getElementById('recipe-section').classList.remove('hidden');
+                    document.getElementById('update-date').innerText = cols[4] || "";
                 }
 
-                setConfig({ avatarUrl: BASE_URL + img, showSnow: snow, greeting: text });
+                tableBody.innerHTML = rows.map(row => {
+                    const c = row.split(',');
+                    return `<tr class="hover:bg-green-50/50"><td class="p-3 text-xs font-bold text-gray-700">${c[0]||"-"}</td><td class="p-3 text-sm font-black text-red-500 text-center">¥${c[1]||"-"}</td><td class="p-3 text-[10px] text-gray-500">${c[2]||"-"}</td></tr>`;
+                }).join('');
+            } catch (e) {
+                document.getElementById('price-table').innerHTML = '<tr><td colspan="3" class="p-10 text-center text-gray-400 text-xs">データ更新をお楽しみに！</td></tr>';
+            }
+        }
 
-                // 2. CSVデータを取得する
-                fetch(BASE_URL + 'supermarket_prices.csv')
-                    .then(res => res.ok ? res.text() : null)
-                    .then(data => {
-                        if (data) {
-                            const rows = data.split('\n').filter(r => r.trim()).slice(0, 15); // 上位15件表示
-                            setPrices(rows.map(row => {
-                                const [item, price, store] = row.split(',');
-                                return { item, price, store };
-                            }));
-                        }
-                    })
-                    .catch(() => console.log("データがまだないようです"));
-            }, []);
+        // レシピ検索ボタンの動作
+        document.getElementById('recipe-btn').addEventListener('click', () => {
+            if (firstItem) {
+                const query = encodeURIComponent(firstItem + " レシピ");
+                window.open(`https://www.google.com/search?q=${query}`, '_blank');
+            }
+        });
 
-            return (
-                <div className="min-h-screen p-4 flex flex-col items-center relative overflow-hidden">
-                    {/* 雪のエフェクト（条件付き表示） */}
-                    {config.showSnow && (
-                        <div className="snow-container">
-                            {[...Array(25)].map((_, i) => (
-                                <div key={i} className="snowflake" style={{
-                                    left: `${Math.random() * 100}%`,
-                                    width: `${Math.random() * 6 + 3}px`,
-                                    height: `${Math.random() * 6 + 3}px`,
-                                    animationDuration: `${Math.random() * 5 + 5}s`,
-                                    animationDelay: `${Math.random() * 5}s`
-                                }}></div>
-                            ))}
-                        </div>
-                    )}
-
-                    <header className="text-center mb-6 z-10">
-                        <h1 className="text-xl font-bold text-blue-800">静岡最安値ナビ</h1>
-                        <p className="text-sm text-blue-600">Powered by 響</p>
-                    </header>
-
-                    {/* アバターエリア（ミニサイズに変更） */}
-                    <div className="mb-6 text-center z-10 flex flex-col items-center">
-                        <img 
-                            src={config.avatarUrl} 
-                            alt="響" 
-                            // ここでサイズを調整！ w-32 (8rem) に設定
-                            className="w-32 h-auto hibiki-alive rounded-full border-4 border-white shadow-md"
-                            onError={(e) => { e.target.src = BASE_URL + "1766939160101.png"; }}
-                        />
-                        <div className="mt-3 bg-white py-2 px-4 rounded-full shadow-sm border border-blue-100">
-                            <p className="text-sm font-bold text-gray-700">{config.greeting}</p>
-                        </div>
-                    </div>
-
-                    {/* 価格リスト */}
-                    <div className="w-full max-w-md bg-white rounded-xl shadow overflow-hidden z-10 text-sm">
-                        <table className="w-full text-left">
-                            <thead className="bg-blue-50">
-                                <tr><th className="p-2">商品</th><th className="p-2">価格</th><th className="p-2">店名</th></tr>
-                            </thead>
-                            <tbody>
-                                {prices.length > 0 ? prices.map((p, i) => (
-                                    <tr key={i} className="border-t bg-white hover:bg-blue-50 transition">
-                                        <td className="p-2">{p.item}</td>
-                                        <td className="p-2 font-bold text-red-500">¥{p.price}</td>
-                                        <td className="p-2 text-gray-500 truncate max-w-[100px]">{p.store}</td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan="3" className="p-8 text-center text-gray-400">データを待ってるよ...</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        initApp();
+        fetchPrices();
     </script>
 </body>
 </html>
