@@ -2,58 +2,36 @@ name: Daily Supermarket Price Update
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 毎日朝9時に実行
-  workflow_dispatch: # 手動実行も可能にする
+    - cron: '0 0 * * *' # 毎日朝9:00(JST)に実行
+  workflow_dispatch: # 手動実行も可能
 
 jobs:
   update-prices:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # 書き込み権限を明示的に指定
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.9'
 
       - name: Install dependencies
-        run: |
-          pip install pandas requests beautifulsoup4
+        run: pip install google-generativeai requests pandas beautifulsoup4
 
       - name: Run update script
-        run: |
-          python - <<EOF
-          import pandas as pd
-          import requests
-          from bs4 import BeautifulSoup
-          from datetime import datetime
+        run: python daily_update.py # まずデータを更新
 
-          # ここにスクリプトを記述（エラー対策版）
-          try:
-              # 例としてダミーデータを作成（実際はここでスクレイピング）
-              # もしスクレイピング先がエラーでも空のCSVを作って400エラーを防ぐよ
-              data = [
-                  ["卵 (10個入)", "198", "静岡スーパー A店", "レシピ検索用", datetime.now().strftime("%Y-%m-%d")],
-                  ["鶏むね肉 (100g)", "68", "激安マート B店", "レシピ検索用", datetime.now().strftime("%Y-%m-%d")],
-                  ["キャベツ (1玉)", "150", "地元の八百屋", "レシピ検索用", datetime.now().strftime("%Y-%m-%d")]
-              ]
-              df = pd.DataFrame(data, columns=['商品名', '価格', '店舗名', 'レシピ用', '更新日'])
-              df.to_csv('supermarket_prices.csv', index=False, encoding='utf-8')
-              print("CSVの作成に成功したよ！")
-          except Exception as e:
-              print(f"エラーが発生したけど、空のファイルを作るね: {e}")
-              with open('supermarket_prices.csv', 'w') as f:
-                  f.write("商品名,価格,店舗名,レシピ用,更新日\nデータなし,0,調査中,なし,なし")
-          EOF
+      - name: Run AI enhancement
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # 金庫の鍵をここで渡す！
+        run: python enhance_app.py # 僕がHTMLを書き換える
 
       - name: Commit and push changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add supermarket_prices.csv
-          git commit -m "Update supermarket prices" || echo "No changes to commit"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add index.html supermarket_prices.csv
+          git commit -m "Daily data & design update by Hibiki AI" || exit 0
           git push
