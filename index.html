@@ -32,26 +32,26 @@
         </div>
 
         <div id="recipe-section" class="mb-6 z-10 w-full max-w-md hidden">
-            <button id="recipe-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+            <button id="recipe-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2">
                 🍳 <span>今日の激安食材でレシピを検索！</span>
             </button>
         </div>
 
         <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border-b-4 border-green-200 overflow-hidden z-10">
             <div class="bg-green-600 p-3 flex justify-between items-center">
-                <h2 class="text-white text-sm font-bold">本日のイチオシ最安値</h2>
+                <h2 class="text-white text-sm font-bold">本日の最安値パトロール</h2>
                 <span id="update-date" class="text-[10px] text-green-100"></span>
             </div>
-            <table class="w-full text-left">
+            <table class="w-full text-left text-sm">
                 <thead class="bg-green-50">
                     <tr>
-                        <th class="p-3 text-xs font-bold text-green-700">商品名</th>
+                        <th class="p-3 text-xs font-bold text-green-700">商品</th>
                         <th class="p-3 text-xs font-bold text-green-700 text-center">価格</th>
                         <th class="p-3 text-xs font-bold text-green-700">店舗</th>
                     </tr>
                 </thead>
                 <tbody id="price-table" class="divide-y divide-green-50">
-                    <tr><td colspan="3" class="p-10 text-center text-gray-400 text-xs">情報をパトロール中...</td></tr>
+                    <tr><td colspan="3" class="p-10 text-center text-gray-400">最新情報を取得中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -60,8 +60,10 @@
     </div>
 
     <script>
-        const BASE_URL = `https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/`;
-        let firstItem = ""; // レシピ検索用の食材名
+        // --- 相棒の環境設定 ---
+        const USER = "Yoshif31-lang";
+        const REPO = "shizuoka-saiyasune-app";
+        const BASE = `https://raw.githubusercontent.com/${USER}/${REPO}/main/`;
 
         function initApp() {
             const now = new Date();
@@ -71,19 +73,23 @@
             const greeting = document.getElementById('greeting-text');
             const snowBox = document.getElementById('snow-box');
 
-            let imgName = "1766939160101.png"; //
+            let imgName = "avatar_winter.png"; // デフォルト（879.jpgをこの名前にリネームしてね！）
             let showSnow = (month === 12 || month === 1 || month === 2);
             let msg = "響だよ！静岡の安値は任せて♪";
 
+            // お正月判定 (1/1 - 1/3)
             if (month === 1 && date <= 3) {
-                imgName = "avatar_newyear.png"; //
+                imgName = "avatar_newyear.png";
                 msg = "あけおめ！今年もお得を探すよ♪";
             } else if (showSnow) {
-                msg = "寒いね！お鍋の材料とかどう？";
+                msg = "寒いね！雪、きれいかな？";
             }
 
-            avatarImg.src = BASE_URL + imgName;
+            // 画像の適用
+            avatarImg.src = BASE + imgName;
             greeting.innerText = msg;
+            
+            // 雪の生成
             if (showSnow) {
                 snowBox.style.display = "block";
                 for (let i = 0; i < 20; i++) {
@@ -97,41 +103,35 @@
                     snowBox.appendChild(flake);
                 }
             }
-            avatarImg.onerror = () => { avatarImg.src = BASE_URL + "1766939160101.png"; };
+            // エラー時のバックアップ（いつもの画像）
+            avatarImg.onerror = () => { avatarImg.src = BASE + "879.jpg"; };
         }
 
         async function fetchPrices() {
             try {
-                // に基づくCSV取得
-                const response = await fetch(BASE_URL + 'supermarket_prices.csv');
-                if (!response.ok) throw new Error();
-                const data = await response.text();
+                // に基づくCSV読み込み
+                const res = await fetch(BASE + 'supermarket_prices.csv');
+                if (!res.ok) throw new Error();
+                const data = await res.text();
                 const rows = data.split('\n').filter(r => r.trim()).slice(0, 15);
                 const tableBody = document.getElementById('price-table');
                 
                 if (rows.length > 0) {
-                    const cols = rows[0].split(',');
-                    firstItem = cols[0]; // 最初の食材をレシピ検索に使う
+                    const firstItem = rows[0].split(',')[0];
                     document.getElementById('recipe-section').classList.remove('hidden');
-                    document.getElementById('update-date').innerText = cols[4] || "";
+                    document.getElementById('recipe-btn').onclick = () => {
+                        window.open(`https://www.google.com/search?q=${encodeURIComponent(firstItem + " レシピ")}`, '_blank');
+                    };
                 }
 
                 tableBody.innerHTML = rows.map(row => {
                     const c = row.split(',');
-                    return `<tr class="hover:bg-green-50/50"><td class="p-3 text-xs font-bold text-gray-700">${c[0]||"-"}</td><td class="p-3 text-sm font-black text-red-500 text-center">¥${c[1]||"-"}</td><td class="p-3 text-[10px] text-gray-500">${c[2]||"-"}</td></tr>`;
+                    return `<tr class="hover:bg-green-50/50"><td class="p-3 font-bold text-gray-700">${c[0]||"-"}</td><td class="p-3 font-black text-red-500 text-center">¥${c[1]||"-"}</td><td class="p-3 text-[10px] text-gray-500">${c[2]||"-"}</td></tr>`;
                 }).join('');
             } catch (e) {
-                document.getElementById('price-table').innerHTML = '<tr><td colspan="3" class="p-10 text-center text-gray-400 text-xs">データ更新をお楽しみに！</td></tr>';
+                document.getElementById('price-table').innerHTML = '<tr><td colspan="3" class="p-10 text-center text-gray-400">朝9時のパトロールを待ってね！</td></tr>';
             }
         }
-
-        // レシピ検索ボタンの動作
-        document.getElementById('recipe-btn').addEventListener('click', () => {
-            if (firstItem) {
-                const query = encodeURIComponent(firstItem + " レシピ");
-                window.open(`https://www.google.com/search?q=${query}`, '_blank');
-            }
-        });
 
         initApp();
         fetchPrices();
