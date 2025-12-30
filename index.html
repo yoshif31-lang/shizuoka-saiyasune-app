@@ -6,31 +6,14 @@
     <title>静岡最安値ナビ | 響</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 1. 呼吸アニメーション（ふわふわ動く） */
-        @keyframes breathe {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        .hibiki-alive {
-            animation: breathe 3s ease-in-out infinite;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15));
-        }
-
-        /* 2. 雪のアニメーション */
-        @keyframes snowfall {
-            0% { transform: translateY(-10vh) translateX(0); opacity: 1; }
-            100% { transform: translateY(100vh) translateX(20px); opacity: 0.3; }
-        }
-        .snow-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 50;
-        }
-        .snowflake {
-            position: absolute; top: -10px; background-color: white;
-            border-radius: 50%; opacity: 0.8; animation: snowfall linear infinite;
-        }
+        @keyframes breathe { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        .hibiki-alive { animation: breathe 3s ease-in-out infinite; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15)); }
+        @keyframes snowfall { 0% { transform: translateY(-10vh) translateX(0); opacity: 1; } 100% { transform: translateY(100vh) translateX(20px); opacity: 0.3; } }
+        .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+        .snowflake { position: absolute; top: -10px; background-color: white; border-radius: 50%; opacity: 0.8; animation: snowfall linear infinite; }
     </style>
 </head>
 <body class="bg-blue-50">
@@ -39,47 +22,35 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // --- 設定エリア ---
-        const REPO_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/";
+        // --- 設定エリア：もし動かなければここを 'master' に変えてみて！ ---
+        const BRANCH = "main"; 
+        const REPO_PATH = "Yoshif31-lang/shizuoka-saiyasune-app";
+        const BASE_URL = `https://raw.githubusercontent.com/${REPO_PATH}/${BRANCH}/`;
         
-        // 自動衣替えロジック
         const getAvatarSettings = () => {
             const now = new Date();
             const month = now.getMonth() + 1;
             const date = now.getDate();
-            
-            // デフォルト設定
-            let img = "1766939160101.png"; // 今のメイン画像
+            let img = "1766939160101.png"; // デフォルト画像
             let showSnow = false;
 
-            // お正月（1/1 - 1/3）
-            if (month === 1 && date <= 3) {
-                img = "avatar_newyear.png";
-                showSnow = true;
-            } 
-            // 冬（12月〜2月）
-            else if (month === 12 || month === 1 || month === 2) {
-                img = "avatar_winter.png"; // 用意したらこれに切り替わる
-                showSnow = true;
-            }
-            // 春（3月〜5月）
-            else if (month >= 3 && month <= 5) img = "avatar_spring.png";
-            // 夏（6月〜8月）
-            else if (month >= 6 && month <= 8) img = "avatar_summer.png";
-            // 秋（9月〜11月）
-            else if (month >= 9 && month <= 11) img = "avatar_autumn.png";
-
-            return { url: REPO_URL + img, showSnow };
+            if (month === 1 && date <= 3) { img = "avatar_newyear.png"; showSnow = true; } 
+            else if (month === 12 || month === 1 || month === 2) { img = "1766939160101.png"; showSnow = true; }
+            return { url: BASE_URL + img, showSnow };
         };
 
         const App = () => {
             const [prices, setPrices] = useState([]);
+            const [error, setError] = useState(null);
             const { url: avatarUrl, showSnow } = getAvatarSettings();
 
             useEffect(() => {
-                // Manusが保存したCSVを読み込む
-                fetch(REPO_URL + 'supermarket_prices.csv')
-                    .then(res => res.text())
+                // Manusが初期実行を完了しているか確認
+                fetch(BASE_URL + 'supermarket_prices.csv')
+                    .then(res => {
+                        if (!res.ok) throw new Error("CSVファイルが見つかりません。パスが正しいか確認してね！");
+                        return res.text();
+                    })
                     .then(data => {
                         const rows = data.split('\n').filter(r => r.trim());
                         const parsed = rows.map(row => {
@@ -87,15 +58,17 @@
                             return { item, price, store, address, date };
                         });
                         setPrices(parsed);
-                    });
+                    })
+                    .catch(err => setError(err.message));
             }, []);
+
+            if (error) return <div className="p-10 text-red-500">エラー発生: {error}</div>;
 
             return (
                 <div className="min-h-screen p-4 flex flex-col items-center">
-                    {/* 雪のエフェクト */}
                     {showSnow && (
                         <div className="snow-container">
-                            {[...Array(30)].map((_, i) => (
+                            {[...Array(20)].map((_, i) => (
                                 <div key={i} className="snowflake" style={{
                                     left: `${Math.random() * 100}%`,
                                     width: `${Math.random() * 8 + 4}px`,
@@ -112,15 +85,14 @@
                         <p className="text-blue-600">Powered by 響</p>
                     </header>
 
-                    {/* 響のアバター */}
-                    <div className="mb-8 z-20">
+                    <div className="mb-8 z-20 text-center">
                         <img 
                             src={avatarUrl} 
                             alt="響" 
-                            className="w-64 h-auto hibiki-alive"
-                            onError={(e) => { e.target.src = REPO_URL + '1766939160101.png'; }} // 画像がない時のバックアップ
+                            className="w-64 h-auto mx-auto hibiki-alive"
+                            onError={(e) => { e.target.src = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png"; }}
                         />
-                        <div className="mt-4 bg-white p-4 rounded-2xl shadow-lg border-2 border-blue-200 relative">
+                        <div className="mt-4 bg-white p-4 rounded-2xl shadow-lg border-2 border-blue-200">
                             <p className="text-gray-700 font-bold">
                                 {new Date().getMonth() + 1 === 1 && new Date().getDate() <= 3 
                                     ? "あけましておめでとう！雪、きれいだね…♪" 
@@ -129,15 +101,10 @@
                         </div>
                     </div>
 
-                    {/* 価格リスト */}
                     <div className="w-full max-w-md bg-white rounded-xl shadow-md overflow-hidden z-20">
                         <table className="w-full text-left">
                             <thead className="bg-blue-100">
-                                <tr>
-                                    <th className="p-3">商品</th>
-                                    <th className="p-3">価格</th>
-                                    <th className="p-3">店名</th>
-                                </tr>
+                                <tr><th className="p-3">商品</th><th className="p-3">価格</th><th className="p-3">店名</th></tr>
                             </thead>
                             <tbody>
                                 {prices.length > 0 ? prices.map((p, i) => (
@@ -159,6 +126,5 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </body>
 </html>
