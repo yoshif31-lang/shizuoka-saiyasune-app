@@ -3,141 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>静岡最安値ナビ | 響</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        .avatar-anim { animation: heartbeat 3s infinite ease-in-out; }
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* 1. 呼吸アニメーション（ふわふわ動く） */
+        @keyframes breathe {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .hibiki-alive {
+            animation: breathe 3s ease-in-out infinite;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15));
+        }
+
+        /* 2. 雪のアニメーション */
+        @keyframes snowfall {
+            0% { transform: translateY(-10vh) translateX(0); opacity: 1; }
+            100% { transform: translateY(100vh) translateX(20px); opacity: 0.3; }
+        }
+        .snow-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50;
+        }
+        .snowflake {
+            position: absolute; top: -10px; background-color: white;
+            border-radius: 50%; opacity: 0.8; animation: snowfall linear infinite;
+        }
     </style>
 </head>
-<body class="bg-pink-50 text-gray-800 font-sans">
+<body class="bg-blue-50">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect } = React;
 
-        const CSV_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/supermarket_prices.csv";
-        const AVATAR_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png";
-        const AREAS = ["すべて", "浜松", "磐田", "袋井", "掛川"];
-        const VERSION = "32.0";
+        // --- 設定エリア ---
+        const REPO_URL = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/";
+        
+        // 自動衣替えロジック
+        const getAvatarSettings = () => {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            
+            // デフォルト設定
+            let img = "1766939160101.png"; // 今のメイン画像
+            let showSnow = false;
 
-        const GREETINGS = [
-            "響だよ！今日もいいもの見つけてきたよ♪",
-            "こんにちは、響です！今日のお買い物のアドバイスするね！",
-            "お疲れ様！響が今日のイチオシを教えるね♪",
-            "やっほー！響と一緒に今日の献立考えよ！"
-        ];
+            // お正月（1/1 - 1/3）
+            if (month === 1 && date <= 3) {
+                img = "avatar_newyear.png";
+                showSnow = true;
+            } 
+            // 冬（12月〜2月）
+            else if (month === 12 || month === 1 || month === 2) {
+                img = "avatar_winter.png"; // 用意したらこれに切り替わる
+                showSnow = true;
+            }
+            // 春（3月〜5月）
+            else if (month >= 3 && month <= 5) img = "avatar_spring.png";
+            // 夏（6月〜8月）
+            else if (month >= 6 && month <= 8) img = "avatar_summer.png";
+            // 秋（9月〜11月）
+            else if (month >= 9 && month <= 11) img = "avatar_autumn.png";
+
+            return { url: REPO_URL + img, showSnow };
+        };
 
         const App = () => {
-            const [data, setData] = useState([]);
-            const [activeArea, setActiveArea] = useState("すべて");
-            const [speech, setSpeech] = useState(null);
-            const [userInput, setUserInput] = useState("");
+            const [prices, setPrices] = useState([]);
+            const { url: avatarUrl, showSnow } = getAvatarSettings();
 
             useEffect(() => {
-                const fetchData = async () => {
-                    try {
-                        const res = await fetch(CSV_URL);
-                        const text = await res.text();
-                        const rows = text.split('\n').slice(1);
+                // Manusが保存したCSVを読み込む
+                fetch(REPO_URL + 'supermarket_prices.csv')
+                    .then(res => res.text())
+                    .then(data => {
+                        const rows = data.split('\n').filter(r => r.trim());
                         const parsed = rows.map(row => {
                             const [item, price, store, address, date] = row.split(',');
-                            return { item: item?.trim(), price: parseInt(price), store: store?.trim(), address: address?.trim(), date: date?.trim() };
-                        }).filter(d => d.item);
-                        setData(parsed);
-                    } catch (e) { console.error(e); }
-                };
-                fetchData();
+                            return { item, price, store, address, date };
+                        });
+                        setPrices(parsed);
+                    });
             }, []);
 
-            const filteredData = useMemo(() => {
-                let list = data;
-                if (activeArea !== "すべて") list = list.filter(d => (d.store + d.address).includes(activeArea));
-                const minMap = {};
-                list.forEach(d => { if (!minMap[d.item] || d.price < minMap[d.item].price) minMap[d.item] = d; });
-                return Object.values(minMap).sort((a,b) => a.price - b.price);
-            }, [data, activeArea]);
-
-            const openRecipe = (keyword) => {
-                const url = `https://www.google.com/search?q=${encodeURIComponent(keyword + ' レシピ')}`;
-                window.open(url, '_blank');
-            };
-
-            // 響をタップした時は「紹介」だけ
-            const handleAutoConsult = () => {
-                if (filteredData.length === 0) return setSpeech({ text: "今はデータがないみたい...。" });
-                const best = filteredData[0];
-                const greet = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-                setSpeech({ 
-                    text: `${greet}\n今、${best.item}が¥${best.price}ですごくお得だよ！レシピを見てみる？`, 
-                    menu: best.item 
-                });
-            };
-
-            // 相談入力した時は「即検索」
-            const handleInputConsult = (e) => {
-                e.preventDefault();
-                if (!userInput) return;
-                setSpeech({ text: `「${userInput}」のレシピだね！別タブで開くよ♪`, menu: userInput });
-                openRecipe(userInput);
-                setUserInput("");
-            };
-
             return (
-                <div className="max-w-md mx-auto min-h-screen pb-48 relative">
-                    <header className="bg-green-800 text-white p-4 sticky top-0 z-10 text-center font-bold text-xl shadow-lg tracking-widest">静岡最安値ナビ</header>
-                    
-                    <div className="flex gap-1 p-2 overflow-x-auto bg-green-700 sticky top-[60px] z-10 shadow-sm">
-                        {AREAS.map(a => (
-                            <button key={a} onClick={() => {setActiveArea(a); setSpeech(null);}} className={`px-4 py-1 rounded-full text-sm whitespace-nowrap transition-all ${activeArea === a ? 'bg-white text-green-800 shadow' : 'bg-green-600 text-white'}`}>{a}</button>
-                        ))}
+                <div className="min-h-screen p-4 flex flex-col items-center">
+                    {/* 雪のエフェクト */}
+                    {showSnow && (
+                        <div className="snow-container">
+                            {[...Array(30)].map((_, i) => (
+                                <div key={i} className="snowflake" style={{
+                                    left: `${Math.random() * 100}%`,
+                                    width: `${Math.random() * 8 + 4}px`,
+                                    height: `${Math.random() * 8 + 4}px`,
+                                    animationDuration: `${Math.random() * 5 + 5}s`,
+                                    animationDelay: `${Math.random() * 5}s`
+                                }}></div>
+                            ))}
+                        </div>
+                    )}
+
+                    <header className="text-center mb-8 z-20">
+                        <h1 className="text-2xl font-bold text-blue-800">静岡最安値ナビ</h1>
+                        <p className="text-blue-600">Powered by 響</p>
+                    </header>
+
+                    {/* 響のアバター */}
+                    <div className="mb-8 z-20">
+                        <img 
+                            src={avatarUrl} 
+                            alt="響" 
+                            className="w-64 h-auto hibiki-alive"
+                            onError={(e) => { e.target.src = REPO_URL + '1766939160101.png'; }} // 画像がない時のバックアップ
+                        />
+                        <div className="mt-4 bg-white p-4 rounded-2xl shadow-lg border-2 border-blue-200 relative">
+                            <p className="text-gray-700 font-bold">
+                                {new Date().getMonth() + 1 === 1 && new Date().getDate() <= 3 
+                                    ? "あけましておめでとう！雪、きれいだね…♪" 
+                                    : "響だよ！今日の静岡の最安値をチェックしてね！"}
+                            </p>
+                        </div>
                     </div>
 
-                    <main className="p-3 space-y-3">
-                        {filteredData.map((d, i) => (
-                            <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border-l-8 border-green-600 flex justify-between items-center fade-in">
-                                <div><div className="font-bold text-lg text-gray-700">{d.item}</div><div className="text-sm text-blue-600 underline">{d.store}</div></div>
-                                <div className="text-right font-black text-orange-600 italic text-2xl leading-none">¥{d.price}</div>
-                            </div>
-                        ))}
-                    </main>
-
-                    <div className="fixed bottom-0 left-0 right-0 flex flex-col items-end z-50 p-4 pointer-events-none">
-                        {speech && (
-                            <div className="bg-white p-4 rounded-3xl shadow-2xl text-sm mb-4 mr-2 border-2 border-green-500 max-w-[260px] fade-in relative pointer-events-auto">
-                                <button onClick={() => setSpeech(null)} className="absolute top-1 right-3 text-gray-400 text-lg">×</button>
-                                <p className="font-medium text-gray-700 leading-relaxed pr-4 whitespace-pre-wrap">{speech.text}</p>
-                                {speech.menu && (
-                                    <div className="mt-3 flex justify-center">
-                                        <button onClick={() => openRecipe(speech.menu)} 
-                                           className="bg-green-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-green-700 flex items-center gap-1 animate-bounce">
-                                           🍳 レシピを検索
-                                        </button>
-                                    </div>
+                    {/* 価格リスト */}
+                    <div className="w-full max-w-md bg-white rounded-xl shadow-md overflow-hidden z-20">
+                        <table className="w-full text-left">
+                            <thead className="bg-blue-100">
+                                <tr>
+                                    <th className="p-3">商品</th>
+                                    <th className="p-3">価格</th>
+                                    <th className="p-3">店名</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {prices.length > 0 ? prices.map((p, i) => (
+                                    <tr key={i} className="border-t">
+                                        <td className="p-3">{p.item}</td>
+                                        <td className="p-3 font-bold text-red-500">¥{p.price}</td>
+                                        <td className="p-3 text-sm text-gray-600">{p.store}</td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan="3" className="p-10 text-center text-gray-400">データを読み込み中...</td></tr>
                                 )}
-                                <div className="absolute bottom-[-10px] right-10 w-5 h-5 bg-white border-b-2 border-r-2 border-green-500 rotate-45"></div>
-                            </div>
-                        )}
-                        
-                        <div className="flex items-center gap-2 pointer-events-auto relative">
-                            <span className="absolute -top-4 right-0 text-[10px] text-gray-300">Ver {VERSION}</span>
-                            <form onSubmit={handleInputConsult} className="bg-white rounded-full shadow-xl border-2 border-green-500 flex overflow-hidden max-w-[180px]">
-                                <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="レシピを検索..." className="px-4 py-2 text-sm outline-none w-full bg-transparent" />
-                                <button type="submit" className="bg-green-500 text-white px-3 font-bold">Go</button>
-                            </form>
-                            <img src={AVATAR_URL} onClick={handleAutoConsult} className="w-24 h-auto avatar-anim cursor-pointer drop-shadow-2xl" style={{ objectFit: 'contain' }} />
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             );
         };
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </body>
 </html>
