@@ -6,174 +6,123 @@
     <title>静岡最安値ナビ | 響</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 響の全身を活かす呼吸アニメーション */
-        @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-        .hibiki-hero { animation: breathe 4s ease-in-out infinite; transform-origin: bottom; }
-        /* 季節の雪演出 */
-        @keyframes snowfall { 0% { transform: translateY(-10vh); opacity: 0.8; } 100% { transform: translateY(100vh); opacity: 0.2; } }
-        .snowflake { position: absolute; background: white; border-radius: 50%; pointer-events: none; animation: snowfall linear infinite; }
-        /* 12/30時点の特別な影とぼかし */
-        .glass-nav { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
+        @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+        .chibi-hibiki { animation: breathe 3s ease-in-out infinite; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .active-tab { background-color: #059669 !important; color: white !important; }
     </style>
 </head>
-<body class="bg-[#f2f7f5] text-slate-900 font-sans min-h-screen pb-24">
-    <div id="snow-field" class="fixed inset-0 z-50 pointer-events-none" style="display:none;"></div>
+<body class="bg-[#f7faf8] text-slate-900 font-sans min-h-screen">
 
-    <header class="sticky top-0 z-40 glass-nav border-b border-emerald-100 p-4">
-        <div class="max-w-md mx-auto flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-black text-emerald-800 tracking-tighter">静岡最安値ナビ</h1>
-                <p class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Hibiki Partner Project</p>
-            </div>
-            <div class="flex gap-3">
-                <span class="text-xl">📊</span>
-                <span class="text-xl">🔔</span>
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-emerald-100 shadow-sm py-4">
+        <div class="max-w-md mx-auto px-4">
+            <h1 class="text-center text-lg font-black text-emerald-800 mb-3 tracking-tighter uppercase">静岡最安値ナビ</h1>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar justify-between sm:justify-center">
+                <button onclick="filterArea('浜松')" class="tab-btn flex-none px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold transition-all">浜松</button>
+                <button onclick="filterArea('磐田')" class="tab-btn flex-none px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold transition-all">磐田</button>
+                <button onclick="filterArea('袋井')" class="tab-btn flex-none px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold transition-all">袋井</button>
+                <button onclick="filterArea('掛川')" class="tab-btn flex-none px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold transition-all">掛川</button>
+                <button onclick="filterArea('すべて')" class="tab-btn flex-none px-4 py-2 rounded-full active-tab text-xs font-bold transition-all">すべて</button>
             </div>
         </div>
-    </header>
+    </nav>
 
-    <main class="max-w-md mx-auto px-4 py-6 space-y-6">
+    <main class="max-w-md mx-auto px-4 py-6 flex flex-col items-center">
         
-        <div class="relative w-full h-[420px] rounded-[2.5rem] overflow-hidden shadow-2xl bg-white border-4 border-white fade-in">
-            <div class="absolute inset-0 bg-gradient-to-t from-emerald-50/50 to-transparent"></div>
-            
-            <img id="hibiki-avatar" src="./879.jpg" alt="響" class="w-full h-full object-contain object-bottom hibiki-hero relative z-10">
-            
-            <div class="absolute top-6 left-6 right-6 z-20">
-                <div class="bg-white/95 shadow-xl p-4 rounded-2xl border border-emerald-50">
-                    <p id="chat-bubble" class="text-xs font-bold text-slate-700 leading-relaxed text-center">データをパトロール中だよ、相棒！</p>
+        <div class="relative flex flex-col items-center mb-8">
+            <div class="mb-3 relative z-20">
+                <div class="bg-white px-5 py-2.5 rounded-2xl shadow-lg border border-emerald-50 text-center">
+                    <p id="chat-bubble" class="text-[11px] font-bold text-slate-700">準備完了！エリアを選んでね♪</p>
                 </div>
+                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-emerald-50 rotate-45"></div>
             </div>
 
-            <div id="recipe-area" class="absolute bottom-6 left-6 right-6 z-20 hidden">
-                <button id="recipe-go" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-2">
-                    🍳 <span class="text-sm">今日の激安食材でレシピ検索！</span>
-                </button>
+            <div class="w-32 h-32 rounded-[2.5rem] bg-white border-4 border-white shadow-xl overflow-hidden relative z-10">
+                <img id="hibiki-img" src="./879.jpg" alt="響" class="w-full h-full object-cover object-top chibi-hibiki">
             </div>
         </div>
 
-        <section class="space-y-4">
-            <div class="flex justify-between items-end px-2">
-                <h2 class="text-lg font-black text-slate-800">本日の特売リスト</h2>
-                <p id="last-update" class="text-[10px] text-slate-400 font-mono"></p>
-            </div>
-            
-            <div id="price-container" class="space-y-3">
-                <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 text-center text-slate-400 text-xs">
-                    パトロール結果を確認しています...
-                </div>
-            </div>
-        </section>
+        <div id="price-list" class="w-full space-y-4">
+            <p class="text-center py-10 text-slate-400 text-xs">パトロール機を起動中...</p>
+        </div>
     </main>
 
-    <div class="fixed bottom-6 left-6 right-6 max-w-md mx-auto z-50">
-        <nav class="bg-slate-900/95 backdrop-blur-xl rounded-[2rem] p-3 shadow-2xl border border-white/10 flex justify-around items-center">
-            <button class="flex flex-col items-center gap-1 text-emerald-400 transition-colors">
-                <span class="text-2xl">🏠</span>
-                <span class="text-[9px] font-bold">ホーム</span>
-            </button>
-            <button class="flex flex-col items-center gap-1 text-slate-400">
-                <span class="text-2xl">🔍</span>
-                <span class="text-[9px] font-bold">探す</span>
-            </button>
-            <button class="flex flex-col items-center gap-1 text-slate-400">
-                <span class="text-2xl">📋</span>
-                <span class="text-[9px] font-bold">履歴</span>
-            </button>
-            <button class="flex flex-col items-center gap-1 text-slate-400">
-                <span class="text-2xl">👤</span>
-                <span class="text-[9px] font-bold">マイ</span>
-            </button>
-        </nav>
-    </div>
-
     <script>
-        const CSV_FILE = "./supermarket_prices.csv";
-        let topFood = "";
+        const CSV_URL = "./supermarket_prices.csv";
+        let allData = [];
 
-        function boot() {
-            const today = new Date();
-            const mon = today.getMonth() + 1;
-            const date = today.getDate();
-            const avatar = document.getElementById('hibiki-avatar');
+        // アバターと日付の初期設定
+        function setup() {
+            const now = new Date();
+            const m = now.getMonth() + 1;
+            const d = now.getDate();
+            const img = document.getElementById('hibiki-img');
             const chat = document.getElementById('chat-bubble');
-            const snow = document.getElementById('snow-field');
 
-            let img = "879.jpg"; // デフォルト
-            let msg = "相棒、今日の静岡の最安値をまとめたよ！";
-            let winter = (mon === 12 || mon === 1 || mon === 2);
+            let fileName = "879.jpg"; 
+            let msg = "相棒、静岡の最安値をチェックしよう！";
 
-            // 🎍 お正月特別判定 (1/1〜1/3)
-            if (mon === 1 && date <= 3) {
-                img = "avatar_newyear.png"; //
-                msg = "あけおめ！今年もお得な情報をガンガン届けるね♪";
-            } else if (winter) {
-                msg = "外は寒いね！お鍋の材料、安いの探しておいたよ。";
+            // お正月モード（1/1〜1/3）
+            if (m === 1 && d <= 3) {
+                fileName = "avatar_newyear.png";
+                msg = "あけおめ！今年もお得な情報を届けるね♪";
             }
 
-            avatar.src = "./" + img;
+            img.src = "./" + fileName;
             chat.innerText = msg;
-
-            // ❄️ 雪の生成
-            if (winter) {
-                snow.style.display = "block";
-                for (let i = 0; i < 30; i++) {
-                    const s = document.createElement('div');
-                    s.className = 'snowflake';
-                    s.style.left = Math.random() * 100 + '%';
-                    const sz = Math.random() * 5 + 2 + 'px';
-                    s.style.width = sz; s.style.height = sz;
-                    s.style.animationDuration = Math.random() * 6 + 4 + 's';
-                    s.style.animationDelay = Math.random() * 4 + 's';
-                    snow.appendChild(s);
-                }
-            }
-            avatar.onerror = () => { avatar.src = "./879.jpg"; };
+            img.onerror = () => { img.src = "./879.jpg"; };
         }
 
-        async function refreshData() {
+        // CSVの読み込み
+        async function loadData() {
             try {
-                const res = await fetch(CSV_FILE + "?nocache=" + Date.now());
-                if (!res.ok) throw new Error();
-                const text = await res.text();
+                const response = await fetch(CSV_URL + "?nocache=" + Date.now());
+                if (!response.ok) throw new Error();
+                const text = await response.text();
                 const lines = text.split('\n').filter(l => l.trim()).slice(1);
-                const container = document.getElementById('price-container');
-                
-                if (lines.length > 0) {
-                    const first = lines[0].split(',');
-                    topFood = first[0];
-                    document.getElementById('recipe-area').classList.remove('hidden');
-                    document.getElementById('last-update').innerText = "Last Update: " + (first[4] || "Today");
-                }
-
-                container.innerHTML = lines.map(line => {
-                    const c = line.split(',');
-                    return `
-                        <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-50 flex justify-between items-center transform transition-active active:scale-[0.98]">
-                            <div class="flex gap-4 items-center">
-                                <div class="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center text-xl">🛒</div>
-                                <div>
-                                    <h3 class="font-black text-slate-700 text-sm">${c[0]||"-"}</h3>
-                                    <p class="text-[10px] text-slate-400 font-bold">📍 ${c[2]||"-"}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-lg font-black text-red-500">¥${c[1]||"-"}</span>
-                            </div>
-                        </div>`;
-                }).join('');
+                allData = lines.map(line => line.split(','));
+                render('すべて');
             } catch (e) {
-                document.getElementById('price-container').innerHTML = 
-                    '<div class="py-10 text-center text-slate-400 text-xs">パトロール機がメンテナンス中みたい！<br>少し待ってから再読み込みしてみてね。</div>';
+                document.getElementById('price-list').innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">データ準備中だよ！<br>もう一回読み込んでみてね。</div>';
             }
         }
 
-        document.getElementById('recipe-go').onclick = () => {
-            if (topFood) window.open(`https://www.google.com/search?q=${encodeURIComponent(topFood + " レシピ")}`, '_blank');
-        };
+        // カードの描画
+        function render(area) {
+            const list = document.getElementById('price-list');
+            const filtered = area === 'すべて' ? allData : allData.filter(d => d[2].includes(area));
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="bg-white p-8 rounded-3xl text-center text-slate-400 text-xs">今のところ${area}のデータはないみたい！</div>`;
+                return;
+            }
 
-        boot();
-        refreshData();
+            list.innerHTML = filtered.map(c => `
+                <div class="bg-white p-4 rounded-[1.8rem] shadow-sm border border-emerald-50 flex justify-between items-center transform transition-active active:scale-95">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-lg">🛒</div>
+                        <div>
+                            <h3 class="font-black text-slate-700 text-xs">${c[0]||"-"}</h3>
+                            <p class="text-[9px] text-slate-400 font-bold mt-0.5">📍 ${c[2]||"-"}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg font-black text-red-500">¥${c[1]||"-"}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // タブの見た目を更新
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if(btn.innerText === area) btn.classList.add('active-tab');
+                else btn.classList.remove('active-tab');
+            });
+        }
+
+        function filterArea(area) { render(area); }
+
+        setup();
+        loadData();
     </script>
 </body>
 </html>
