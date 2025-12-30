@@ -4,127 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>静岡最安値ナビ | 響</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* 1. 呼吸アニメーション */
         @keyframes breathe { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
         .hibiki-alive { animation: breathe 3s ease-in-out infinite; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15)); }
+
+        /* 2. 雪のアニメーション */
         @keyframes snowfall { 0% { transform: translateY(-10vh) translateX(0); opacity: 1; } 100% { transform: translateY(100vh) translateX(20px); opacity: 0.3; } }
         .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
         .snowflake { position: absolute; top: -10px; background-color: white; border-radius: 50%; opacity: 0.8; animation: snowfall linear infinite; }
     </style>
 </head>
-<body class="bg-blue-50">
-    <div id="root"></div>
+<body class="bg-blue-50 text-gray-800">
+    <div id="snow-box" class="snow-container" style="display:none;"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+    <div class="min-h-screen p-4 flex flex-col items-center">
+        <header class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-blue-800">静岡最安値ナビ</h1>
+            <p class="text-blue-600">Powered by 響</p>
+        </header>
 
-        // --- 設定エリア：もし動かなければここを 'master' に変えてみて！ ---
-        const BRANCH = "main"; 
+        <div class="mb-8 text-center relative z-20">
+            <img id="avatar-img" src="" alt="響" class="w-64 h-auto mx-auto hibiki-alive">
+            <div class="mt-4 bg-white p-4 rounded-2xl shadow-lg border-2 border-blue-200">
+                <p id="greeting-text" class="font-bold text-gray-700">読み込み中...</p>
+            </div>
+        </div>
+
+        <div class="w-full max-w-md bg-white rounded-xl shadow-md overflow-hidden z-20">
+            <table class="w-full text-left">
+                <thead class="bg-blue-100">
+                    <tr><th class="p-3">商品</th><th class="p-3">価格</th><th className="p-3">店名</th></tr>
+                </thead>
+                <tbody id="price-table">
+                    <tr><td colspan="3" class="p-10 text-center text-gray-400">データを取得しています...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // --- 設定 ---
         const REPO_PATH = "Yoshif31-lang/shizuoka-saiyasune-app";
-        const BASE_URL = `https://raw.githubusercontent.com/${REPO_PATH}/${BRANCH}/`;
-        
-        const getAvatarSettings = () => {
+        const BASE_URL = `https://raw.githubusercontent.com/${REPO_PATH}/main/`;
+
+        // 1. 日付判定とアバター設定
+        function updateUI() {
             const now = new Date();
             const month = now.getMonth() + 1;
             const date = now.getDate();
-            let img = "1766939160101.png"; // デフォルト画像
-            let showSnow = false;
+            const avatarImg = document.getElementById('avatar-img');
+            const greeting = document.getElementById('greeting-text');
+            const snowBox = document.getElementById('snow-box');
 
-            if (month === 1 && date <= 3) { img = "avatar_newyear.png"; showSnow = true; } 
-            else if (month === 12 || month === 1 || month === 2) { img = "1766939160101.png"; showSnow = true; }
-            return { url: BASE_URL + img, showSnow };
-        };
+            let imgName = "1766939160101.png"; // デフォルト
+            let isNewYear = (month === 1 && date <= 3);
 
-        const App = () => {
-            const [prices, setPrices] = useState([]);
-            const [error, setError] = useState(null);
-            const { url: avatarUrl, showSnow } = getAvatarSettings();
+            if (isNewYear) {
+                imgName = "avatar_newyear.png"; // 袴姿
+                greeting.innerText = "あけましておめでとう！雪、きれいだね…♪";
+                snowBox.style.display = "block";
+                createSnowflakes();
+            } else {
+                greeting.innerText = "響だよ！今日の静岡の最安値をチェックしてね！";
+                // 冬期間は雪だけ降らせる
+                if (month === 12 || month === 1 || month === 2) {
+                    snowBox.style.display = "block";
+                    createSnowflakes();
+                }
+            }
+            avatarImg.src = BASE_URL + imgName;
+            // エラー時のバックアップ
+            avatarImg.onerror = () => { avatarImg.src = BASE_URL + "1766939160101.png"; };
+        }
 
-            useEffect(() => {
-                // Manusが初期実行を完了しているか確認
-                fetch(BASE_URL + 'supermarket_prices.csv')
-                    .then(res => {
-                        if (!res.ok) throw new Error("CSVファイルが見つかりません。パスが正しいか確認してね！");
-                        return res.text();
-                    })
-                    .then(data => {
-                        const rows = data.split('\n').filter(r => r.trim());
-                        const parsed = rows.map(row => {
-                            const [item, price, store, address, date] = row.split(',');
-                            return { item, price, store, address, date };
-                        });
-                        setPrices(parsed);
-                    })
-                    .catch(err => setError(err.message));
-            }, []);
+        // 2. 雪を降らせる
+        function createSnowflakes() {
+            const snowBox = document.getElementById('snow-box');
+            for (let i = 0; i < 30; i++) {
+                const flake = document.createElement('div');
+                flake.className = 'snowflake';
+                flake.style.left = Math.random() * 100 + '%';
+                const size = Math.random() * 8 + 4 + 'px';
+                flake.style.width = size;
+                flake.style.height = size;
+                flake.style.animationDuration = Math.random() * 5 + 5 + 's';
+                flake.style.animationDelay = Math.random() * 5 + 's';
+                snowBox.appendChild(flake);
+            }
+        }
 
-            if (error) return <div className="p-10 text-red-500">エラー発生: {error}</div>;
+        // 3. CSVデータの取得
+        async function fetchPrices() {
+            try {
+                const response = await fetch(BASE_URL + 'supermarket_prices.csv');
+                if (!response.ok) throw new Error();
+                const data = await response.text();
+                const rows = data.split('\n').filter(r => r.trim()).slice(0, 10); // 上位10件
+                const tableBody = document.getElementById('price-table');
+                tableBody.innerHTML = rows.map(row => {
+                    const [item, price, store] = row.split(',');
+                    return `<tr class="border-t"><td class="p-3">${item}</td><td class="p-3 font-bold text-red-500">¥${price}</td><td class="p-3 text-sm text-gray-600">${store}</td></tr>`;
+                }).join('');
+            } catch (e) {
+                document.getElementById('price-table').innerHTML = '<tr><td colspan="3" class="p-10 text-center text-red-400">データが見つかりませんでした。Manusの実行を待ってね！</td></tr>';
+            }
+        }
 
-            return (
-                <div className="min-h-screen p-4 flex flex-col items-center">
-                    {showSnow && (
-                        <div className="snow-container">
-                            {[...Array(20)].map((_, i) => (
-                                <div key={i} className="snowflake" style={{
-                                    left: `${Math.random() * 100}%`,
-                                    width: `${Math.random() * 8 + 4}px`,
-                                    height: `${Math.random() * 8 + 4}px`,
-                                    animationDuration: `${Math.random() * 5 + 5}s`,
-                                    animationDelay: `${Math.random() * 5}s`
-                                }}></div>
-                            ))}
-                        </div>
-                    )}
-
-                    <header className="text-center mb-8 z-20">
-                        <h1 className="text-2xl font-bold text-blue-800">静岡最安値ナビ</h1>
-                        <p className="text-blue-600">Powered by 響</p>
-                    </header>
-
-                    <div className="mb-8 z-20 text-center">
-                        <img 
-                            src={avatarUrl} 
-                            alt="響" 
-                            className="w-64 h-auto mx-auto hibiki-alive"
-                            onError={(e) => { e.target.src = "https://raw.githubusercontent.com/Yoshif31-lang/shizuoka-saiyasune-app/main/1766939160101.png"; }}
-                        />
-                        <div className="mt-4 bg-white p-4 rounded-2xl shadow-lg border-2 border-blue-200">
-                            <p className="text-gray-700 font-bold">
-                                {new Date().getMonth() + 1 === 1 && new Date().getDate() <= 3 
-                                    ? "あけましておめでとう！雪、きれいだね…♪" 
-                                    : "響だよ！今日の静岡の最安値をチェックしてね！"}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="w-full max-w-md bg-white rounded-xl shadow-md overflow-hidden z-20">
-                        <table className="w-full text-left">
-                            <thead className="bg-blue-100">
-                                <tr><th className="p-3">商品</th><th className="p-3">価格</th><th className="p-3">店名</th></tr>
-                            </thead>
-                            <tbody>
-                                {prices.length > 0 ? prices.map((p, i) => (
-                                    <tr key={i} className="border-t">
-                                        <td className="p-3">{p.item}</td>
-                                        <td className="p-3 font-bold text-red-500">¥{p.price}</td>
-                                        <td className="p-3 text-sm text-gray-600">{p.store}</td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan="3" className="p-10 text-center text-gray-400">データを読み込み中...</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        updateUI();
+        fetchPrices();
     </script>
 </body>
 </html>
