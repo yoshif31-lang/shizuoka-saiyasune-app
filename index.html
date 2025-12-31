@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="notranslate" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,7 @@
             font-family: sans-serif;
             margin: 20px;
             padding: 0;
-            transition: all 0.5s ease; /* 変化をなめらかに */
+            transition: all 0.5s ease;
         }
         .container {
             max-width: 600px;
@@ -18,6 +18,7 @@
             border: 1px solid #ccc;
             padding: 20px;
             border-radius: 10px;
+            background-color: white; /* 枠内は白固定 */
         }
     </style>
 
@@ -25,22 +26,32 @@
     <script>
         async function applyHibikiDesign() {
             try {
-                // キャッシュを避けるためにタイムスタンプを付けて instruction.txt を読み込む
-                const url = 'https://raw.githubusercontent.com/yoshif31-lang/shizuoka-saiyasune-app/main/instruction.txt?' + new Date().getTime();
-                const response = await fetch(url);
+                // 1. キャッシュを破壊して常に「新品」を読み込む
+                const cacheBuster = Math.random().toString(36).substring(7);
+                const url = 'https://raw.githubusercontent.com/yoshif31-lang/shizuoka-saiyasune-app/main/instruction.txt?v=' + cacheBuster;
+                
+                const response = await fetch(url, { cache: "no-store" });
                 const text = await response.text();
 
-                // テキストに { } が含まれていたらCSSコードと判断して適用
-                if (text.includes('{')) {
-                    document.getElementById('hibiki-style').innerHTML = text;
-                    console.log("✅ 響からのデザイン指示を適用したよ！");
+                console.log("司令部からの生データ:", text);
+
+                // 2. テキストの中から { } で囲まれた部分（CSS）だけを抜き出す
+                const cssMatch = text.match(/\{[\s\S]*\}/);
+                
+                if (cssMatch) {
+                    // 日本語のゴミを除去した純粋なコードを適用
+                    document.getElementById('hibiki-style').innerHTML = cssMatch[0];
+                    console.log("✅ デザインの呪文を解読・適用したよ！");
+                } else {
+                    console.log("ℹ️ デザイン用のコードが見つからなかったよ。");
                 }
             } catch (err) {
-                console.error("⚠️ 指示の読み込みに失敗しちゃった:", err);
+                console.error("⚠️ 司令部との通信エラー:", err);
             }
         }
-        // サイトを開いた時に実行
+        // サイトを開いた時と、少し遅らせて2回実行（確実性を高めるため）
         window.onload = applyHibikiDesign;
+        setTimeout(applyHibikiDesign, 1000); 
     </script>
 </head>
 <body>
