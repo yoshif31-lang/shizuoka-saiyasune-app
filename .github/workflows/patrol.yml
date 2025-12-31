@@ -1,0 +1,28 @@
+name: Shizuoka Price Patrol
+on:
+  schedule:
+    - cron: '0 0 * * *' # 日本時間の朝9時に毎日実行（UTC 0:00）
+  workflow_dispatch: # 手動で動かしたい時用
+
+jobs:
+  update-price:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Command to Supabase
+        run: |
+          # 相棒の基地情報
+          URL="https://rfegjvfthzaflfrhsjmb.supabase.co"
+          KEY="sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q"
+
+          # 響がパトロールした最新情報を書き込む（例：しずてつストアの卵）
+          curl -X POST "$URL/rest/v1/commands" \
+          -H "apikey: $KEY" \
+          -H "Authorization: Bearer $KEY" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "store_name": "しずてつストア",
+            "product_name": "卵",
+            "price": 158,
+            "message": "しずてつストア：卵 158円！爆速でゲットだぜ！",
+            "bg_color": "#ff8c00"
+          }'
