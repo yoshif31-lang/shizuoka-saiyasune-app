@@ -1,33 +1,83 @@
-<script>
-    // 相棒の基地情報
-    const SB_URL = "https://rfegjvfthzaflfrhsjmb.supabase.co";
-    const SB_KEY = "sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q";
-    // 変数名を sbClient に変更して衝突を回避だ！
-    const sbClient = supabase.createClient(SB_URL, SB_KEY);
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>静岡最安値ナビ - 司令室</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            transition: background-color 0.5s ease;
+            text-align: center;
+        }
+        .container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            width: 80%;
+            max-width: 400px;
+        }
+        .store { font-size: 1.2rem; opacity: 0.9; margin-bottom: 0.5rem; }
+        .product { font-size: 1.5rem; font-weight: bold; }
+        .price-box { font-size: 4rem; font-weight: 900; margin: 1rem 0; }
+        .price-unit { font-size: 1.5rem; margin-left: 0.5rem; }
+        .message { font-size: 1.1rem; line-height: 1.4; }
+        .update-time { font-size: 0.8rem; margin-top: 2rem; opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="store" class="store">店舗を確認中...</div>
+        <div id="product" class="product">商品を取得中...</div>
+        <div class="price-box"><span id="price">---</span><span class="price-unit">円</span></div>
+        <div id="msg" class="message">響が情報をパトロールしています...</div>
+        <div id="time" class="update-time"></div>
+    </div>
 
-    async function start() {
-        // 「最新の1件（idが一番大きいもの）」を取ってくるように強化！
-        const { data, error } = await sbClient
-            .from('commands')
-            .select('*')
-            .order('id', { ascending: false })
-            .limit(1);
+    <script>
+        // 相棒の基地情報
+        const SB_URL = "https://rfegjvfthzaflfrhsjmb.supabase.co";
+        const SB_KEY = "sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q";
+        const sbClient = supabase.createClient(SB_URL, SB_KEY);
 
-        if (data && data.length > 0) {
-            update(data[0]);
+        async function start() {
+            // 最新の1件を全列取得（store_name, product_name, priceを含む）
+            const { data, error } = await sbClient
+                .from('commands')
+                .select('*')
+                .order('id', { ascending: false })
+                .limit(1);
+
+            if (data && data.length > 0) {
+                updateUI(data[0]);
+            }
+
+            // リアルタイム更新の監視
+            sbClient.channel('any')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands' }, payload => {
+                updateUI(payload.new);
+            }).subscribe();
         }
 
-        // リアルタイム更新の監視
-        sbClient.channel('any')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands' }, payload => {
-            update(payload.new);
-        }).subscribe();
-    }
+        function updateUI(data) {
+            document.body.style.backgroundColor = data.bg_color || '#333';
+            document.getElementById('store').innerText = data.store_name || '不明な店舗';
+            document.getElementById('product').innerText = data.product_name || '商品未設定';
+            document.getElementById('price').innerText = data.price || '---';
+            document.getElementById('msg').innerText = data.message || '';
+            document.getElementById('time').innerText = "最終更新: " + new Date().toLocaleTimeString();
+        }
 
-    function update(data) {
-        document.body.style.backgroundColor = data.bg_color;
-        document.getElementById('msg').innerText = data.message;
-    }
-
-    start();
-</script>
+        start();
+    </script>
+</body>
+</html>
