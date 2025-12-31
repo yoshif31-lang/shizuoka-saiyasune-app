@@ -3,38 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値アプリ - 司令室連携版</title>
+    <title>静岡最安値ナビ - 司令室</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; transition: all 0.5s ease; }
-        .container { max-width: 600px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 10px; background-color: white; }
+        /* デフォルトの見た目（読み込み中） */
+        body { 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            background-color: #f4f4f4; 
+            transition: background-color 0.8s ease; 
+        }
+        .container { 
+            text-align: center; 
+            background: white; 
+            padding: 2rem; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            max-width: 80%;
+        }
+        #message-box { 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            color: #333; 
+            margin-top: 1rem;
+            line-height: 1.4;
+        }
+        h1 { font-size: 1rem; color: #888; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
     </style>
     <style id="hibiki-style"></style>
+    
     <script>
-        async function applyHibikiDesign() {
+        async function applyHibikiCommand() {
             try {
+                // キャッシュを破壊して最新のinstruction.txtを取得
                 const cacheBuster = Math.random().toString(36).substring(7);
                 const url = 'https://raw.githubusercontent.com/yoshif31-lang/shizuoka-saiyasune-app/main/instruction.txt?v=' + cacheBuster;
+                
                 const response = await fetch(url, { cache: "no-store" });
                 const text = await response.text();
 
-                // 🪄 日本語のゴミがあっても { } の中身だけを救出する魔法
+                // 🪄 1. { } で囲まれたCSSを探して適用する
                 const cssMatch = text.match(/\{[\s\S]*\}/);
                 if (cssMatch) {
                     document.getElementById('hibiki-style').innerHTML = cssMatch[0];
-                    console.log("✅ 呪文を解読したよ！");
                 }
-            } catch (err) { console.error("Error:", err); }
+
+                // 🪄 2. 「メッセージ：」の後の文字を抜き出して表示する
+                const msgMatch = text.match(/メッセージ：(.+)/);
+                if (msgMatch && msgMatch[1]) {
+                    document.getElementById('message-box').innerText = msgMatch[1].trim();
+                } else {
+                    document.getElementById('message-box').innerText = "司令部からの指令を待機中...";
+                }
+            } catch (err) {
+                console.error("通信エラーだよ:", err);
+                document.getElementById('message-box').innerText = "通信エラーが発生したよ。リロードしてみて！";
+            }
         }
-        window.onload = applyHibikiDesign;
-        setTimeout(applyHibikiDesign, 1000); 
+
+        // ページが開いた時と、1秒後に念押しで実行
+        window.onload = applyHibikiCommand;
+        setTimeout(applyHibikiCommand, 1000);
     </script>
 </head>
 <body>
     <div class="container">
-        <h1>静岡最安値アプリ</h1>
-        <p>ここは Manus と響が連携する司令室直結のページだよ。</p>
-        <hr>
-        <div id="status">現在の指示は <code>instruction.txt</code> を確認してね。</div>
+        <h1>Shizuoka Yasune Navi</h1>
+        <div id="message-box">響が情報を取得中...</div>
     </div>
 </body>
 </html>
