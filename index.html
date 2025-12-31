@@ -1,45 +1,33 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ - 爆速司令部</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { transition: background-color 0.3s ease; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .card { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 2rem; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.3); }
-        h1 { font-size: 2.5rem; margin: 0; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1 id="msg">同期中...</h1>
-    </div>
+<script>
+    // 相棒の基地情報
+    const SB_URL = "https://rfegjvfthzaflfrhsjmb.supabase.co";
+    const SB_KEY = "sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q";
+    // 変数名を sbClient に変更して衝突を回避だ！
+    const sbClient = supabase.createClient(SB_URL, SB_KEY);
 
-    <script>
-        // 相棒の基地情報
-        const SB_URL = "https://rfegjvfthzaflfrhsjmb.supabase.co";
-        const SB_KEY = "sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q"; // 画像のキーを使用
-        const supabase = supabase.createClient(SB_URL, SB_KEY);
+    async function start() {
+        // 「最新の1件（idが一番大きいもの）」を取ってくるように強化！
+        const { data, error } = await sbClient
+            .from('commands')
+            .select('*')
+            .order('id', { ascending: false })
+            .limit(1);
 
-        async function start() {
-            // 1. 最初の一回、データを取ってくる
-            const { data } = await supabase.from('commands').select('*').limit(1).single();
-            if (data) update(data);
-
-            // 2. 基地でデータが変わったら「0.1秒」で反映させる魔法
-            supabase.channel('any')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commands' }, payload => {
-                update(payload.new);
-            }).subscribe();
+        if (data && data.length > 0) {
+            update(data[0]);
         }
 
-        function update(data) {
-            document.body.style.backgroundColor = data.bg_color;
-            document.getElementById('msg').innerText = data.message;
-        }
+        // リアルタイム更新の監視
+        sbClient.channel('any')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands' }, payload => {
+            update(payload.new);
+        }).subscribe();
+    }
 
-        start();
-    </script>
-</body>
-</html>
+    function update(data) {
+        document.body.style.backgroundColor = data.bg_color;
+        document.getElementById('msg').innerText = data.message;
+    }
+
+    start();
+</script>
