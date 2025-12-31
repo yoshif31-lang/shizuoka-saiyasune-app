@@ -1,78 +1,45 @@
 <!DOCTYPE html>
-<html lang="ja" class="notranslate" translate="no">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ - 司令室</title>
+    <title>静岡最安値ナビ - 爆速司令部</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* デフォルトの見た目（読み込み中） */
-        body { 
-            font-family: 'Helvetica Neue', Arial, sans-serif; 
-            margin: 0; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            background-color: #f4f4f4; 
-            transition: background-color 0.8s ease; 
-        }
-        .container { 
-            text-align: center; 
-            background: white; 
-            padding: 2rem; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-            max-width: 80%;
-        }
-        #message-box { 
-            font-size: 1.5rem; 
-            font-weight: bold; 
-            color: #333; 
-            margin-top: 1rem;
-            line-height: 1.4;
-        }
-        h1 { font-size: 1rem; color: #888; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        body { transition: background-color 0.3s ease; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .card { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 2rem; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.3); }
+        h1 { font-size: 2.5rem; margin: 0; }
     </style>
-    <style id="hibiki-style"></style>
-    
-    <script>
-        async function applyHibikiCommand() {
-            try {
-                // キャッシュを破壊して最新のinstruction.txtを取得
-                const cacheBuster = Math.random().toString(36).substring(7);
-                const url = 'https://raw.githubusercontent.com/yoshif31-lang/shizuoka-saiyasune-app/main/instruction.txt?v=' + cacheBuster;
-                
-                const response = await fetch(url, { cache: "no-store" });
-                const text = await response.text();
-
-                // 🪄 1. { } で囲まれたCSSを探して適用する
-                const cssMatch = text.match(/\{[\s\S]*\}/);
-                if (cssMatch) {
-                    document.getElementById('hibiki-style').innerHTML = cssMatch[0];
-                }
-
-                // 🪄 2. 「メッセージ：」の後の文字を抜き出して表示する
-                const msgMatch = text.match(/メッセージ：(.+)/);
-                if (msgMatch && msgMatch[1]) {
-                    document.getElementById('message-box').innerText = msgMatch[1].trim();
-                } else {
-                    document.getElementById('message-box').innerText = "司令部からの指令を待機中...";
-                }
-            } catch (err) {
-                console.error("通信エラーだよ:", err);
-                document.getElementById('message-box').innerText = "通信エラーが発生したよ。リロードしてみて！";
-            }
-        }
-
-        // ページが開いた時と、1秒後に念押しで実行
-        window.onload = applyHibikiCommand;
-        setTimeout(applyHibikiCommand, 1000);
-    </script>
 </head>
 <body>
-    <div class="container">
-        <h1>Shizuoka Yasune Navi</h1>
-        <div id="message-box">響が情報を取得中...</div>
+    <div class="card">
+        <h1 id="msg">同期中...</h1>
     </div>
+
+    <script>
+        // 相棒の基地情報
+        const SB_URL = "https://rfegjvfthzaflfrhsjmb.supabase.co";
+        const SB_KEY = "sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q"; // 画像のキーを使用
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function start() {
+            // 1. 最初の一回、データを取ってくる
+            const { data } = await supabase.from('commands').select('*').limit(1).single();
+            if (data) update(data);
+
+            // 2. 基地でデータが変わったら「0.1秒」で反映させる魔法
+            supabase.channel('any')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commands' }, payload => {
+                update(payload.new);
+            }).subscribe();
+        }
+
+        function update(data) {
+            document.body.style.backgroundColor = data.bg_color;
+            document.getElementById('msg').innerText = data.message;
+        }
+
+        start();
+    </script>
 </body>
 </html>
