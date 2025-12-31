@@ -1,0 +1,2 @@
+{ body { background-color: #ff8c00 !important; } }
+メッセージ：【開通完了】オレンジ色の司令室、ついに始動！
