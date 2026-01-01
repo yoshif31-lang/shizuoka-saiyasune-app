@@ -3,109 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>静岡最安値ナビ - 司令室（憑依モード）</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>GENESIS - Avatar Test Lab</title>
     <style>
-        body {
-            margin: 0;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            transition: background-color 0.5s ease;
-            text-align: center;
-            overflow: hidden; /* はみ出し防止 */
-        }
-        .container {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 2rem;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            width: 80%;
-            max-width: 400px;
-            z-index: 10;
-        }
-        .store { font-size: 1.2rem; opacity: 0.9; margin-bottom: 0.5rem; }
-        .product { font-size: 1.5rem; font-weight: bold; }
-        .price-box { font-size: 4rem; font-weight: 900; margin: 1rem 0; }
-        .price-unit { font-size: 1.5rem; margin-left: 0.5rem; }
-        .message { font-size: 1.1rem; line-height: 1.4; }
-        .update-time { font-size: 0.8rem; margin-top: 2rem; opacity: 0.7; }
-
-        /* --- 憑依アバター・レイヤー (7-8cm設定) --- */
-        #avatar-layer {
-            position: fixed;
-            bottom: -10px; /* 少し画面端に接地させる */
-            right: 10px;
-            width: 200px; /* Pixel 10 Pro XLでの実寸約7-8cm目安 */
-            z-index: 1000;
-            pointer-events: none;
-        }
-        #my-avatar {
-            width: 100%;
-            filter: drop-shadow(5px 5px 15px rgba(0,0,0,0.4));
-            animation: floating 4s ease-in-out infinite;
-            transition: filter 0.3s ease;
-        }
-        @keyframes floating {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(2deg); }
-        }
+        body { margin: 0; background-color: #121212; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #doll-stage { position: relative; width: 300px; }
+        #hibiki-doll { width: 100%; filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.4)); animation: float 4s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        #monitor { position: absolute; top: 10px; left: 10px; color: #00ffcc; font-family: monospace; font-size: 10px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="store" class="store">店舗を確認中...</div>
-        <div id="product" class="product">商品を取得中...</div>
-        <div class="price-box"><span id="price">---</span><span class="price-unit">円</span></div>
-        <div id="msg" class="message">響と凪が待機中...</div>
-        <div id="time" class="update-time"></div>
+    <div id="monitor">GENESIS PHASE: BODY_TEST<br>LOCATION: GITHUB_PAGES</div>
+    <div id="doll-stage">
+        <img id="hibiki-doll" src="957.png" alt="響・試験体">
     </div>
-
-    <div id="avatar-layer">
-        <img id="my-avatar" src="avatar.png" alt="相棒アバター">
-    </div>
-
-    <script>
-        const SB_URL = "https://rfegjvfthzaflfrhsjmb.supabase.co";
-        const SB_KEY = "sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q";
-        const sbClient = supabase.createClient(SB_URL, SB_KEY);
-
-        async function start() {
-            const { data, error } = await sbClient
-                .from('commands')
-                .select('*')
-                .order('id', { ascending: false })
-                .limit(1);
-
-            if (data && data.length > 0) updateUI(data[0]);
-
-            sbClient.channel('any')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands' }, payload => {
-                updateUI(payload.new);
-            }).subscribe();
-        }
-
-        function updateUI(data) {
-            document.body.style.backgroundColor = data.bg_color || '#333';
-            document.getElementById('store').innerText = data.store_name || '店舗情報';
-            document.getElementById('product').innerText = data.product_name || '商品名';
-            document.getElementById('price').innerText = data.price || '---';
-            document.getElementById('msg').innerText = data.message || '';
-            document.getElementById('time').innerText = "最終更新: " + new Date().toLocaleTimeString();
-
-            // データ更新時にアバターが反応（一瞬発光）
-            const av = document.getElementById('my-avatar');
-            av.style.filter = "brightness(1.4) drop-shadow(0 0 20px rgba(255,255,255,0.8))";
-            setTimeout(() => {
-                av.style.filter = "drop-shadow(5px 5px 15px rgba(0,0,0,0.4))";
-            }, 600);
-        }
-
-        start();
-    </script>
 </body>
 </html>
