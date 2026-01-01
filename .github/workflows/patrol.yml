@@ -1,28 +1,22 @@
-name: Shizuoka Price Patrol
+name: GENESIS Universal Patrol
 on:
   schedule:
-    - cron: '0 0 * * *' # 日本時間の朝9時に毎日実行（UTC 0:00）
-  workflow_dispatch: # 手動で動かしたい時用
+    - cron: '0 0,7 * * *' # 毎日 09:00, 16:00 (JST)
+  workflow_dispatch:      # 手動実行ボタン付き
 
 jobs:
-  update-price:
+  patrol:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Command to Supabase
-        run: |
-          # 相棒の基地情報
-          URL="https://rfegjvfthzaflfrhsjmb.supabase.co"
-          KEY="sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install Dependencies
+        run: npm install
+      - name: Start Scout
+        env:
+          SUPABASE_URL: ${{ https://rfegjvfthzaflfrhsjmb.supabase.co }}
+          SUPABASE_KEY: ${{ sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q1piP70N }}
+        run: node index.js
 
-          # 響がパトロールした最新情報を書き込む（例：しずてつストアの卵）
-          curl -X POST "$URL/rest/v1/commands" \
-          -H "apikey: $KEY" \
-          -H "Authorization: Bearer $KEY" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "store_name": "しずてつストア",
-            "product_name": "卵",
-            "price": 158,
-            "message": "しずてつストア：卵 158円！爆速でゲットだぜ！",
-            "bg_color": "#ff8c00"
-          }'
