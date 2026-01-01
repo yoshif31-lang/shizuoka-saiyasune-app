@@ -14,7 +14,7 @@ jobs:
         run: npm install @supabase/supabase-js axios cheerio
       - name: Execute OMNI-ENGINE
         env:
-          SUPABASE_URL: ${{https://rfegjvfthzaflfrhsjmb.supabase.co}}
-          SUPABASE_KEY: ${{sb_publishable_9jkx_z4SgbTk0_rH48adsQ_Q1piP70N}}
+          # 金庫（1091.pngで登録したやつ）から呼び出す正しい呪文だよ！
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: node index.js
-
