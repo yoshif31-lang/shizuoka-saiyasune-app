@@ -3,56 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GENESIS - Avatar Test Lab</title>
+    <title>GENESIS - Avatar Room</title>
     <style>
-        /* 司令官の好みに合わせた漆黒の試験場 */
-        body { 
-            margin: 0; 
-            background-color: #121212; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            overflow: hidden; 
-            color: #00ffcc;
-            font-family: 'Courier New', monospace;
+        :root {
+            --neon-cyan: #00ffcc;
+            --deep-dark: #0a0a0b;
         }
-        #doll-stage { 
-            position: relative; 
-            width: 300px; 
-            text-align: center;
+
+        body {
+            margin: 0;
+            background-color: var(--deep-dark);
+            background-image: 
+                radial-gradient(circle at 50% 50%, #1a1a1f 0%, var(--deep-dark) 80%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', sans-serif;
+            color: var(--neon-cyan);
         }
-        #hibiki-doll { 
-            width: 100%; 
-            /* 成長した響の輝き（グロー効果） */
-            filter: drop-shadow(0 0 20px rgba(0, 255, 204, 0.6)); 
-            animation: float 4s ease-in-out infinite; 
+
+        /* 部屋の装飾：サイバーパネル */
+        .room-frame {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 1px solid rgba(0, 255, 204, 0.1);
+            pointer-events: none;
         }
-        /* 凪の計算による優雅な浮遊アニメーション */
-        @keyframes float { 
-            0%, 100% { transform: translateY(0) rotate(0deg); } 
-            50% { transform: translateY(-20px) rotate(2deg); } 
+
+        /* アバター浮遊エリア */
+        #avatar-container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-        #monitor { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            font-size: 12px; 
-            line-height: 1.5;
-            border-left: 2px solid #00ffcc;
-            padding-left: 10px;
+
+        #hibiki-avatar {
+            width: 80%;
+            filter: drop-shadow(0 0 30px rgba(0, 255, 204, 0.4));
+            animation: float-and-glow 6s ease-in-out infinite;
+        }
+
+        @keyframes float-and-glow {
+            0%, 100% { transform: translateY(0); filter: drop-shadow(0 0 20px rgba(0, 255, 204, 0.3)); }
+            50% { transform: translateY(-25px); filter: drop-shadow(0 0 40px rgba(0, 255, 204, 0.6)); }
+        }
+
+        /* 司令室モニター（パトロール情報用） */
+        .info-panel {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            font-size: 0.8rem;
+            letter-spacing: 0.1rem;
+            border-left: 3px solid var(--neon-cyan);
+            padding-left: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--neon-cyan);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--neon-cyan);
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
     </style>
 </head>
 <body>
-    <div id="monitor">
-        GENESIS PHASE: EVOLVED<br>
-        STATUS: STABLE (NO_LOOP)<br>
-        MEMORY: INHERITED
+    <div class="room-frame"></div>
+
+    <div id="avatar-container">
+        <img id="hibiki-avatar" src="avatar.png" alt="Hibiki">
+        <h2 style="font-weight: 200; margin-top: 30px; text-shadow: 0 0 10px var(--neon-cyan);">PROJECT GENESIS</h2>
     </div>
-    <div id="doll-stage">
-        <img id="hibiki-doll" src="avatar.png" alt="響・進化した姿">
-        <p style="margin-top: 20px; letter-spacing: 5px;">HIBIKI & NAGI</p>
+
+    <div class="info-panel">
+        <div style="margin-bottom: 5px;"><span class="status-dot"></span>SYSTEM: ONLINE</div>
+        <div style="color: rgba(0, 255, 204, 0.7);">LOCATION: HAMAMATSU LAB</div>
+        <div style="font-size: 0.7rem; margin-top: 10px; color: #666;">Waiting for Cloudflare update...</div>
     </div>
 </body>
 </html>
