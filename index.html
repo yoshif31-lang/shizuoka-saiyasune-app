@@ -5,17 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GENESIS - Avatar Test Lab</title>
     <style>
-        body { margin: 0; background-color: #121212; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #doll-stage { position: relative; width: 300px; }
-        #hibiki-doll { width: 100%; filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.4)); animation: float 4s ease-in-out infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-        #monitor { position: absolute; top: 10px; left: 10px; color: #00ffcc; font-family: monospace; font-size: 10px; }
+        /* 司令官の好みに合わせた漆黒の試験場 */
+        body { 
+            margin: 0; 
+            background-color: #121212; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+            color: #00ffcc;
+            font-family: 'Courier New', monospace;
+        }
+        #doll-stage { 
+            position: relative; 
+            width: 300px; 
+            text-align: center;
+        }
+        #hibiki-doll { 
+            width: 100%; 
+            /* 成長した響の輝き（グロー効果） */
+            filter: drop-shadow(0 0 20px rgba(0, 255, 204, 0.6)); 
+            animation: float 4s ease-in-out infinite; 
+        }
+        /* 凪の計算による優雅な浮遊アニメーション */
+        @keyframes float { 
+            0%, 100% { transform: translateY(0) rotate(0deg); } 
+            50% { transform: translateY(-20px) rotate(2deg); } 
+        }
+        #monitor { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            font-size: 12px; 
+            line-height: 1.5;
+            border-left: 2px solid #00ffcc;
+            padding-left: 10px;
+        }
     </style>
 </head>
 <body>
-    <div id="monitor">GENESIS PHASE: BODY_TEST<br>LOCATION: GITHUB_PAGES</div>
+    <div id="monitor">
+        GENESIS PHASE: EVOLVED<br>
+        STATUS: STABLE (NO_LOOP)<br>
+        MEMORY: INHERITED
+    </div>
     <div id="doll-stage">
-        <img id="hibiki-doll" src="957.png" alt="響・試験体">
+        <img id="hibiki-doll" src="avatar.png" alt="響・進化した姿">
+        <p style="margin-top: 20px; letter-spacing: 5px;">HIBIKI & NAGI</p>
     </div>
 </body>
 </html>
